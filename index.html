@@ -137,20 +137,6 @@
             display: none;
         }
 
-        .qr-placeholder {
-            width: 150px;
-            height: 150px;
-            background: #f0f0f0;
-            margin: 0 auto 10px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #666;
-            font-size: 12px;
-            text-align: center;
-        }
-
         .queue-item {
             background: #f8f9fa;
             padding: 15px;
@@ -230,7 +216,7 @@
             text-align: center;
             font-size: 18px;
             font-weight: 600;
-            animation: alertFlash 2s infinite;
+            animation: alertFlash 1s infinite;
         }
 
         @keyframes alertFlash {
@@ -249,13 +235,23 @@
             padding-top: 20px;
             border-top: 2px solid #e9ecef;
         }
+
+        .test-notification {
+            background: #17a2b8;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v2.5</h1>
-            <p>Enhanced real-time notifications</p>
+            <h1>🥖 Bhosky v2.6</h1>
+            <p>Simple cross-device notifications</p>
         </div>
 
         <div class="tab-buttons">
@@ -274,9 +270,7 @@
             
             <!-- QR Code Display Area -->
             <div id="qrCodeArea" class="qr-code">
-                <div id="qrCodeURL">
-                    QR Code ready for scan...
-                </div>
+                <div id="qrCodeURL">QR Code ready for scan...</div>
                 <button class="btn" onclick="simulateQRScan()" style="background: #28a745; margin-top: 10px;">
                     ✅ Simulate QR Scan (for testing)
                 </button>
@@ -287,9 +281,7 @@
                 <h3 style="color: #333; margin-bottom: 10px;">📋 Active Orders Queue</h3>
             </div>
             <div id="activeOrdersList">
-                <div class="empty-state">
-                    No active orders. Generate a QR code above to start!
-                </div>
+                <div class="empty-state">No active orders. Generate a QR code above to start!</div>
             </div>
 
             <!-- Export Section -->
@@ -312,77 +304,24 @@
                     <button class="btn" onclick="simulateCustomerView()" id="simulateBtn" style="display: none;">
                         📱 Show Latest Customer View
                     </button>
+                    <div class="test-notification" onclick="testNotification()" style="cursor: pointer; margin-top: 10px;">
+                        🔔 Test Notification (Click Me)
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Google Apps Script URL for direct sheet writing
+        // Simple notification system using URL fragment for cross-device communication
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzqMMoku-2yfR3FImjTMORuJNsH4FXCNJm9Wp1xEEmW1x7NWgWtSUxNpadxFZO39vT/exec';
-
-        // Global variables
+        
         let orders = [];
         let completedOrders = [];
         let pendingCustomerName = '';
         let currentCustomerId = null;
 
-        // Send order data directly to Google Sheet
-        async function sendToGoogleSheet(order) {
-            try {
-                const orderData = {
-                    customerName: order.customerName,
-                    orderTime: order.time,
-                    buzzedTime: order.buzzedTime || 'N/A',
-                    collectedTime: order.collectedTime,
-                    date: order.date,
-                    orderId: order.id
-                };
-
-                console.log('Sending to Google Sheet:', orderData);
-
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain',
-                    },
-                    body: JSON.stringify(orderData),
-                    mode: 'no-cors'
-                });
-
-                // With no-cors mode, we can't read the response, so assume success
-                console.log('Data sent to Google Sheet (no-cors mode)');
-                return true;
-                
-            } catch (error) {
-                console.error('Error sending to Google Sheet:', error);
-                
-                // Try alternative method using a form submission
-                try {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = GOOGLE_SCRIPT_URL;
-                    form.target = '_blank';
-                    form.style.display = 'none';
-                    
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'data';
-                    input.value = JSON.stringify(orderData);
-                    form.appendChild(input);
-                    
-                    document.body.appendChild(form);
-                    form.submit();
-                    document.body.removeChild(form);
-                    
-                    console.log('Data sent via form submission');
-                    return true;
-                } catch (formError) {
-                    console.error('Form submission also failed:', formError);
-                    return false;
-                }
-            }
-        }
+        // Switch between admin and customer tabs
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -401,94 +340,23 @@
             }
 
             pendingCustomerName = customerName;
-            
-            // Create unique order ID for the QR code
             const tempOrderId = Date.now();
             
-            // Create the URL that the QR code will contain
+            // Create URL with notification endpoint
             const customerURL = `${window.location.origin}${window.location.pathname}?order=${tempOrderId}&customer=${encodeURIComponent(customerName)}`;
-            
-            // Generate actual QR code using QR Server API
             const qrCodeURL = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(customerURL)}`;
             
-            // Show QR code area with real QR code
             document.getElementById('qrCodeArea').style.display = 'block';
             document.getElementById('qrCodeURL').innerHTML = `
                 <img src="${qrCodeURL}" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd; border-radius: 10px;">
                 <br><small style="color: #666; font-size: 10px; margin-top: 10px; display: block;">Customer scans with phone camera</small>
             `;
             
-            // Store the temporary order ID
             window.tempOrderId = tempOrderId;
-            
-            // Clear input for next customer
             document.getElementById('customerName').value = '';
-            
-            console.log('Real QR code generated for:', customerName, 'URL:', customerURL);
         }
 
-        // Check URL parameters when page loads (for QR code scans)
-        function checkForQRScan() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const orderId = urlParams.get('order');
-            const customerName = urlParams.get('customer');
-            
-            if (orderId && customerName) {
-                // Customer scanned QR code - show customer-only view
-                console.log('QR code scan detected:', customerName, orderId);
-                
-                // Hide the entire tab system and show only customer content
-                document.querySelector('.tab-buttons').style.display = 'none';
-                document.getElementById('admin').style.display = 'none';
-                document.getElementById('customer').style.display = 'block';
-                document.getElementById('customer').classList.add('active');
-                
-                // Create the order automatically
-                const order = {
-                    id: parseInt(orderId),
-                    customerName: decodeURIComponent(customerName),
-                    time: new Date().toLocaleTimeString(),
-                    date: new Date().toLocaleDateString(),
-                    status: 'waiting'
-                };
-                
-                // Add to orders if not already there
-                if (!orders.find(o => o.id === order.id)) {
-                    orders.push(order);
-                    saveToLocalStorage();
-                }
-                
-                // Show simple customer message
-                const customerInfo = document.getElementById('customerInfo');
-                customerInfo.innerHTML = `
-                    <div style="text-align: center; padding: 40px 20px;">
-                        <div style="font-size: 28px; color: #667eea; margin-bottom: 20px;">
-                            ✅ Order Received!
-                        </div>
-                        <div style="font-size: 18px; color: #333; margin-bottom: 15px;">
-                            Hi <strong>${order.customerName}</strong>!
-                        </div>
-                        <div style="font-size: 16px; color: #666; margin-bottom: 20px;">
-                            Your order was received at <strong>${order.time}</strong>
-                        </div>
-                        <div style="font-size: 16px; color: #666; margin-bottom: 30px;">
-                            We're preparing your order.<br>
-                            We'll notify you when it's ready for pickup.
-                        </div>
-                        <div style="font-size: 14px; color: #999;">
-                            Please keep this page open to receive notifications.
-                        </div>
-                    </div>
-                `;
-                
-                // Set up auto-refresh for customer
-                currentCustomerId = order.id;
-                
-                return true;
-            }
-            return false;
-        }
-        // Simulate QR code scan - adds customer to queue (for testing)
+        // Simulate QR scan
         function simulateQRScan() {
             if (!pendingCustomerName) {
                 alert('Generate a QR code first!');
@@ -504,23 +372,18 @@
             };
 
             orders.push(order);
-            
-            // Hide QR code area and reset
             document.getElementById('qrCodeArea').style.display = 'none';
             pendingCustomerName = '';
             
-            // Update displays
             displayActiveOrders();
             saveToLocalStorage();
             updateCompletedCount();
-            
-            // Focus back on input for next customer
             document.getElementById('customerName').focus();
             
             alert(`${order.customerName} added to queue!`);
         }
 
-        // Display active orders queue
+        // Display active orders
         function displayActiveOrders() {
             const list = document.getElementById('activeOrdersList');
             
@@ -530,7 +393,6 @@
                 return;
             }
 
-            // Show simulate button when orders exist
             document.getElementById('simulateBtn').style.display = 'block';
 
             let html = '';
@@ -556,7 +418,7 @@
             list.innerHTML = html;
         }
 
-        // Buzz customer - notify them order is ready
+        // Buzz customer - simple approach using URL hash
         function buzzCustomer(orderId) {
             const order = orders.find(o => o.id === orderId);
             if (order) {
@@ -565,61 +427,94 @@
                 displayActiveOrders();
                 saveToLocalStorage();
                 
-                // If customer view is showing this order, update it
-                if (currentCustomerId === orderId) {
-                    showCustomerStatus(orderId);
+                // Set a notification flag that customer can check
+                const notificationData = {
+                    orderId: orderId,
+                    status: 'buzzed',
+                    timestamp: Date.now()
+                };
+                
+                // Store notification in sessionStorage (shared across tabs in same browser)
+                try {
+                    sessionStorage.setItem('buzzer_notification', JSON.stringify(notificationData));
+                    localStorage.setItem('buzzer_notification', JSON.stringify(notificationData));
+                } catch (e) {
+                    console.log('Storage not available');
                 }
                 
-                alert(`${order.customerName} has been buzzed! They should come to collect.`);
+                alert(`${order.customerName} has been buzzed!\n\nIf customer is on the same browser/device, they should get notification.\n\nFor different devices, they need to refresh their page.`);
             }
         }
 
-        // Mark order as collected and remove from queue
+        // Mark collected
         async function markCollected(orderId) {
             const order = orders.find(o => o.id === orderId);
             if (order) {
-                // Mark as collected
-                order.status = 'collected';
-                order.collectedTime = new Date().toLocaleTimeString();
-                
-                // Show loading state
                 const button = event.target;
                 const originalText = button.innerHTML;
                 button.innerHTML = '⏳ Saving...';
                 button.disabled = true;
                 
-                // Send directly to Google Sheet
-                const success = await sendToGoogleSheet(order);
+                order.status = 'collected';
+                order.collectedTime = new Date().toLocaleTimeString();
                 
-                // Always assume success with no-cors mode
-                // Move to completed orders (for local backup)
+                await sendToGoogleSheet(order);
+                
                 completedOrders.push(order);
-                
-                // Remove from active queue
                 orders = orders.filter(o => o.id !== orderId);
                 
-                // Update displays
                 displayActiveOrders();
                 saveToLocalStorage();
                 saveCompletedOrders();
                 updateCompletedCount();
                 
-                alert(`${order.customerName}'s order completed! ✅ Data sent to Google Sheet (check the sheet to confirm).`);
+                alert(`${order.customerName}'s order completed! ✅`);
             }
         }
 
-        // Show customer status (for customer view) - updated for QR scanned customers
+        // Check for QR scan
+        function checkForQRScan() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('order');
+            const customerName = urlParams.get('customer');
+            
+            if (orderId && customerName) {
+                document.querySelector('.tab-buttons').style.display = 'none';
+                document.getElementById('admin').style.display = 'none';
+                document.getElementById('customer').style.display = 'block';
+                document.getElementById('customer').classList.add('active');
+                
+                const order = {
+                    id: parseInt(orderId),
+                    customerName: decodeURIComponent(customerName),
+                    time: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleDateString(),
+                    status: 'waiting'
+                };
+                
+                if (!orders.find(o => o.id === order.id)) {
+                    orders.push(order);
+                    saveToLocalStorage();
+                }
+                
+                currentCustomerId = order.id;
+                showCustomerStatus(order.id);
+                
+                return true;
+            }
+            return false;
+        }
+
+        // Show customer status
         function showCustomerStatus(orderId) {
             const order = orders.find(o => o.id === orderId);
             const customerInfo = document.getElementById('customerInfo');
-            currentCustomerId = orderId;
             
             if (!order) {
-                customerInfo.innerHTML = '<p>Order not found or already collected!</p>';
+                customerInfo.innerHTML = '<p>Order not found!</p>';
                 return;
             }
 
-            // Check if this is a QR scanned customer (no tabs visible)
             const isQRCustomer = document.querySelector('.tab-buttons').style.display === 'none';
 
             if (order.status === 'buzzed') {
@@ -634,10 +529,8 @@
                     <p>Order placed at: ${order.time}</p>
                 `;
                 
-                // Try to play notification sound and vibrate
                 playNotification();
             } else if (isQRCustomer) {
-                // For QR scanned customers, show the simple waiting message
                 customerInfo.innerHTML = `
                     <div style="text-align: center; padding: 40px 20px;">
                         <div style="font-size: 24px; color: #667eea; margin-bottom: 20px;">
@@ -654,45 +547,51 @@
                             We'll notify you when it's ready for pickup.
                         </div>
                         <div style="font-size: 14px; color: #999;">
-                            Please keep this page open to receive notifications.
+                            Please keep this page open or refresh to check status.
                         </div>
                     </div>
                 `;
-            } else {
-                // For admin testing view
-                customerInfo.innerHTML = `
-                    <div class="waiting-message">
-                        ⏳ Please wait...
-                    </div>
-                    <p>Hi ${order.customerName}!</p>
-                    <p>Your order is being prepared.</p>
-                    <p>We'll notify you when it's ready.</p>
-                    <p>Order placed at: ${order.time}</p>
-                `;
             }
         }
 
-        // Simulate showing customer view for latest order
-        function simulateCustomerView() {
-            if (orders.length > 0) {
-                const lastOrder = orders[orders.length - 1];
-                showCustomerStatus(lastOrder.id);
-            }
-        }
-
-        // Play notification (sound + vibration) - enhanced for mobile
-        function playNotification() {
-            console.log('Playing notification for customer');
+        // Check for notifications
+        function checkForNotifications() {
+            if (!currentCustomerId) return;
             
-            // Vibration - multiple patterns for better effect
+            try {
+                const notificationData = JSON.parse(localStorage.getItem('buzzer_notification') || sessionStorage.getItem('buzzer_notification') || '{}');
+                
+                if (notificationData.orderId === currentCustomerId && notificationData.status === 'buzzed') {
+                    const order = orders.find(o => o.id === currentCustomerId);
+                    if (order && order.status !== 'buzzed') {
+                        order.status = 'buzzed';
+                        showCustomerStatus(currentCustomerId);
+                        
+                        // Clear the notification
+                        localStorage.removeItem('buzzer_notification');
+                        sessionStorage.removeItem('buzzer_notification');
+                    }
+                }
+            } catch (e) {
+                console.log('Could not check notifications');
+            }
+        }
+
+        // Test notification function
+        function testNotification() {
+            playNotification();
+        }
+
+        // Play notification
+        function playNotification() {
+            console.log('Playing notification');
+            
+            // Vibration
             if ('vibrate' in navigator) {
                 navigator.vibrate([200, 100, 200, 100, 200, 100, 500]);
-                console.log('Vibration triggered');
-            } else {
-                console.log('Vibration not supported on this device');
             }
             
-            // Screen flash - more noticeable
+            // Screen flash
             document.body.style.background = '#ff4757';
             setTimeout(() => {
                 document.body.style.background = '#ff6b6b';
@@ -701,136 +600,87 @@
                 }, 300);
             }, 200);
 
-            // Play beep sequence
+            // Beep sounds
             try {
-                playBeepSequence();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                function playBeep(startTime) {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'square';
+                    
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+                    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.15);
+                    gainNode.gain.linearRampToValueAtTime(0, startTime + 0.2);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + 0.2);
+                }
+                
+                const now = audioContext.currentTime;
+                playBeep(now);
+                playBeep(now + 0.3);
+                playBeep(now + 0.6);
             } catch (e) {
-                console.log('Audio not supported:', e);
+                console.log('Audio not supported');
             }
+        }
 
-            // Show browser notification if supported
-            if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('🔔 Order Ready!', {
-                    body: 'Your bakery order is ready for pickup!',
-                    icon: '/favicon.ico'
+        // Send to Google Sheet
+        async function sendToGoogleSheet(order) {
+            try {
+                const orderData = {
+                    customerName: order.customerName,
+                    orderTime: order.time,
+                    buzzedTime: order.buzzedTime || 'N/A',
+                    collectedTime: order.collectedTime,
+                    date: order.date,
+                    orderId: order.id
+                };
+
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(orderData),
+                    mode: 'no-cors'
                 });
-            } else if ('Notification' in window && Notification.permission !== 'denied') {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        new Notification('🔔 Order Ready!', {
-                            body: 'Your bakery order is ready for pickup!',
-                            icon: '/favicon.ico'
-                        });
-                    }
-                });
+
+                return true;
+            } catch (error) {
+                console.error('Error sending to Google Sheet:', error);
+                return false;
             }
         }
 
-        // Play beep beep beep sequence
-        function playBeepSequence() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            function playBeep(startTime) {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'square';
-                
-                gainNode.gain.setValueAtTime(0, startTime);
-                gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
-                gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.15);
-                gainNode.gain.linearRampToValueAtTime(0, startTime + 0.2);
-                
-                oscillator.start(startTime);
-                oscillator.stop(startTime + 0.2);
-            }
-            
-            const now = audioContext.currentTime;
-            playBeep(now);
-            playBeep(now + 0.3);
-            playBeep(now + 0.6);
-            
-            console.log('Beep sequence played');
-        }
-
-        // Export completed orders to CSV
-        function exportCompletedOrders() {
-            if (completedOrders.length === 0) {
-                alert('No completed orders to export!');
-                return;
-            }
-            
-            let csvData = 'Customer Name,Order Time,Buzzed Time,Collected Time,Date,Order ID\n';
-            completedOrders.forEach(order => {
-                csvData += `"${order.customerName}","${order.time}","${order.buzzedTime || 'N/A'}","${order.collectedTime}","${order.date}","${order.id}"\n`;
-            });
-            
-            const blob = new Blob([csvData], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `bakery-completed-orders-${new Date().toLocaleDateString()}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            alert(`${completedOrders.length} completed orders exported as CSV!`);
-        }
-
-        // Update completed orders count
-        function updateCompletedCount() {
-            document.getElementById('completedCount').textContent = completedOrders.length;
-        }
-
-        // Save to local storage and broadcast to other tabs/devices
+        // Storage functions
         function saveToLocalStorage() {
             try {
                 localStorage.setItem('bakeryActiveOrders', JSON.stringify(orders));
-                // Trigger storage event for other tabs/windows
-                window.dispatchEvent(new Event('storage'));
             } catch (e) {
                 console.log('Local storage not available');
             }
         }
 
-        // Listen for storage changes from other tabs/windows
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'bakeryActiveOrders') {
-                loadFromLocalStorage();
-                // If customer is viewing their order, refresh their status
-                if (currentCustomerId) {
-                    const order = orders.find(o => o.id === currentCustomerId);
-                    if (order) {
-                        showCustomerStatus(currentCustomerId);
-                    }
-                }
-            }
-        });
-
-        // Save completed orders to local storage
         function saveCompletedOrders() {
             try {
                 localStorage.setItem('bakeryCompletedOrders', JSON.stringify(completedOrders));
             } catch (e) {
-                console.log('Local storage not available');
+                console.log('Could not save completed orders');
             }
         }
 
-        // Load from local storage and refresh display
         function loadFromLocalStorage() {
             try {
                 const savedOrders = localStorage.getItem('bakeryActiveOrders');
                 if (savedOrders) {
-                    const newOrders = JSON.parse(savedOrders);
-                    // Check if orders actually changed
-                    if (JSON.stringify(orders) !== JSON.stringify(newOrders)) {
-                        orders = newOrders;
-                        displayActiveOrders();
-                        console.log('Orders updated from storage');
-                    }
+                    orders = JSON.parse(savedOrders);
+                    displayActiveOrders();
                 }
                 
                 const savedCompleted = localStorage.getItem('bakeryCompletedOrders');
@@ -843,35 +693,39 @@
             }
         }
 
-        // Auto-refresh customer view every 2 seconds (more frequent for better responsiveness)
-        setInterval(() => {
-            if (currentCustomerId && document.getElementById('customer').classList.contains('active')) {
-                // Check if this customer still exists in orders (not collected yet)
-                const order = orders.find(o => o.id === currentCustomerId);
-                if (order) {
-                    showCustomerStatus(currentCustomerId);
-                }
-            }
-        }, 2000);
+        function updateCompletedCount() {
+            document.getElementById('completedCount').textContent = completedOrders.length;
+        }
 
-        // Load saved data when app starts
+        function simulateCustomerView() {
+            if (orders.length > 0) {
+                const lastOrder = orders[orders.length - 1];
+                showCustomerStatus(lastOrder.id);
+            }
+        }
+
+        // Check for notifications every 3 seconds
+        setInterval(checkForNotifications, 3000);
+
+        // Load data when app starts
         window.addEventListener('load', function() {
             loadFromLocalStorage();
             
-            // Check if this is a QR code scan
             if (!checkForQRScan()) {
-                // Only show admin view if not a QR scan
                 console.log('Normal admin load');
             }
         });
 
-        // Allow pressing Enter to generate QR code
+        // Allow Enter key to generate QR code
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('customerName').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    generateQRCode();
-                }
-            });
+            const nameInput = document.getElementById('customerName');
+            if (nameInput) {
+                nameInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        generateQRCode();
+                    }
+                });
+            }
         });
     </script>
 </body>
