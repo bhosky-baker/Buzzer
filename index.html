@@ -254,8 +254,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v2.0</h1>
-            <p>Updated Google Script URL</p>
+            <h1>🥖 Bhosky v2.3</h1>
+            <p>Real QR codes for customer phones - UPDATED</p>
         </div>
 
         <div class="tab-buttons">
@@ -298,9 +298,6 @@
 
             <!-- Export Section -->
             <div class="export-section">
-                <button class="btn" onclick="exportCompletedOrders()" style="background: #28a745;">
-                    📊 Export Local Backup to CSV
-                </button>
                 <div style="font-size: 12px; color: #666; margin-top: 10px; text-align: center;">
                     Completed orders: <span id="completedCount">0</span><br>
                     <small>Orders are automatically saved to Google Sheet when collected</small>
@@ -409,15 +406,74 @@
 
             pendingCustomerName = customerName;
             
-            // Show QR code area
+            // Create unique order ID for the QR code
+            const tempOrderId = Date.now();
+            
+            // Create the URL that the QR code will contain
+            const customerURL = `${window.location.origin}${window.location.pathname}?order=${tempOrderId}&customer=${encodeURIComponent(customerName)}`;
+            
+            // Generate actual QR code using QR Server API
+            const qrCodeURL = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(customerURL)}`;
+            
+            // Show QR code area with real QR code
             document.getElementById('qrCodeArea').style.display = 'block';
-            document.getElementById('qrCodeURL').innerHTML = `QR Code for: <strong>${customerName}</strong><br><small>Waiting for scan...</small>`;
+            document.getElementById('qrCodeURL').innerHTML = `
+                <img src="${qrCodeURL}" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd; border-radius: 10px;">
+                <br><strong>QR Code for: ${customerName}</strong>
+                <br><small>Customer scans this with their phone camera</small>
+                <br><small style="color: #666; font-size: 10px;">URL: ${customerURL}</small>
+            `;
+            
+            // Store the temporary order ID
+            window.tempOrderId = tempOrderId;
             
             // Clear input for next customer
             document.getElementById('customerName').value = '';
+            
+            console.log('Real QR code generated for:', customerName, 'URL:', customerURL);
         }
 
-        // Simulate QR code scan - adds customer to queue
+        // Check URL parameters when page loads (for QR code scans)
+        function checkForQRScan() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('order');
+            const customerName = urlParams.get('customer');
+            
+            if (orderId && customerName) {
+                // Customer scanned QR code - show customer view
+                console.log('QR code scan detected:', customerName, orderId);
+                
+                // Switch to customer view automatically
+                switchTab('customer');
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.querySelectorAll('.tab-btn')[0].classList.remove('active');
+                
+                // Create the order automatically
+                const order = {
+                    id: parseInt(orderId),
+                    customerName: decodeURIComponent(customerName),
+                    time: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleDateString(),
+                    status: 'waiting'
+                };
+                
+                // Add to orders if not already there
+                if (!orders.find(o => o.id === order.id)) {
+                    orders.push(order);
+                    saveToLocalStorage();
+                }
+                
+                // Show customer status
+                showCustomerStatus(order.id);
+                
+                // Hide admin controls on customer's phone
+                document.querySelector('.tab-buttons').style.display = 'none';
+                
+                return true;
+            }
+            return false;
+        }
+        // Simulate QR code scan - adds customer to queue (for testing)
         function simulateQRScan() {
             if (!pendingCustomerName) {
                 alert('Generate a QR code first!');
@@ -425,7 +481,7 @@
             }
 
             const order = {
-                id: Date.now(),
+                id: window.tempOrderId || Date.now(),
                 customerName: pendingCustomerName,
                 time: new Date().toLocaleTimeString(),
                 date: new Date().toLocaleDateString(),
@@ -714,6 +770,12 @@
         // Load saved data when app starts
         window.addEventListener('load', function() {
             loadFromLocalStorage();
+            
+            // Check if this is a QR code scan
+            if (!checkForQRScan()) {
+                // Only show admin view if not a QR scan
+                console.log('Normal admin load');
+            }
         });
 
         // Allow pressing Enter to generate QR code
