@@ -257,7 +257,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bakery Order System</h1>
+            <h1>🥖 Bhosky v1.0</h1>
             <p>Order management and customer notifications</p>
         </div>
 
@@ -287,7 +287,12 @@
             <div class="customer-status">
                 <div id="customerInfo">
                     <p>This is what customers see when they scan the QR code.</p>
-                    <p>Switch to Admin Panel to create an order, then come back here to see the customer experience.</p>
+                    <p>To test: Create an order in Admin Panel, then click the button below to simulate scanning the QR code.</p>
+                </div>
+                <div id="simulateSection" style="margin-top: 20px; text-align: center;">
+                    <button class="btn" onclick="simulateQRScan()" id="simulateBtn" style="display: none;">
+                        📱 Simulate QR Code Scan
+                    </button>
                 </div>
             </div>
         </div>
@@ -386,8 +391,13 @@
             
             if (orders.length === 0) {
                 ordersList.innerHTML = '<div class="empty-state">No orders yet. Add a customer above!</div>';
+                // Hide simulate button when no orders
+                document.getElementById('simulateBtn').style.display = 'none';
                 return;
             }
+
+            // Show simulate button when orders exist
+            document.getElementById('simulateBtn').style.display = 'block';
 
             let html = '';
             orders.forEach(order => {
@@ -483,10 +493,21 @@
         // Simulate customer clicking on a QR code
         function simulateQRScan() {
             if (orders.length > 0) {
+                // Use the most recent order for simulation
                 const lastOrder = orders[orders.length - 1];
                 showCustomerStatus(lastOrder.id);
-                switchTab('customer');
-                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                
+                // Update the customer info to show it's connected
+                const customerInfo = document.getElementById('customerInfo');
+                if (lastOrder.status !== 'ready') {
+                    // Add a note that this is the simulated scan
+                    const waitingDiv = document.querySelector('.waiting-message');
+                    if (waitingDiv) {
+                        waitingDiv.innerHTML += '<br><small style="color: #666; font-size: 14px;">(QR Code Scanned Successfully)</small>';
+                    }
+                }
+            } else {
+                alert('Create an order first in Admin Panel!');
             }
         }
 
