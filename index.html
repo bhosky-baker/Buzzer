@@ -39,34 +39,8 @@
             margin-bottom: 10px;
         }
 
-        .tab-buttons {
-            display: flex;
-            background: #f8f9fa;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 15px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .tab-btn.active {
-            background: white;
-            color: #667eea;
-        }
-
-        .tab-content {
-            display: none;
+        .content {
             padding: 30px 20px;
-        }
-
-        .tab-content.active {
-            display: block;
         }
 
         .input-group {
@@ -113,15 +87,28 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .btn.buzz-btn {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-            width: auto;
-            padding: 10px 20px;
-            font-size: 14px;
+        .qr-code {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 15px 0;
+            border: 2px dashed #ddd;
+            display: none;
         }
 
-        .btn.buzz-btn:hover {
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        .qr-placeholder {
+            width: 150px;
+            height: 150px;
+            background: #f0f0f0;
+            margin: 0 auto 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
         }
 
         .queue-item {
@@ -132,18 +119,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: all 0.3s;
             border-left: 4px solid #667eea;
         }
 
         .queue-item.buzzed {
             background: #fff3cd;
             border-left-color: #ffc107;
-        }
-
-        .queue-item.ready-for-collection {
-            background: #d4edda;
-            border-left-color: #28a745;
         }
 
         .queue-number {
@@ -175,103 +156,8 @@
             width: auto;
         }
 
-        .order-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .customer-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .order-time {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .qr-code {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin: 15px 0;
-            border: 2px dashed #ddd;
-        }
-
-        .qr-placeholder {
-            width: 150px;
-            height: 150px;
-            background: #f0f0f0;
-            margin: 0 auto 10px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #666;
-            font-size: 12px;
-            text-align: center;
-        }
-
-        .customer-status {
-            text-align: center;
-            padding: 40px 20px;
-        }
-
-        .waiting-message {
-            font-size: 24px;
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-
-        .ready-message {
-            font-size: 28px;
-            color: #28a745;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .pickup-alert {
-            background: #ff6b6b;
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 18px;
-            font-weight: 600;
-            animation: alertFlash 2s infinite;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-
-        @keyframes alertFlash {
-            0%, 50% { 
-                background: #ff6b6b;
-                transform: scale(1);
-            }
-            25% { 
-                background: #ff4757;
-                transform: scale(1.02);
-            }
-        }
-
-        .notification-sound {
-            position: absolute;
-            top: -9999px;
+        .btn.buzz-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
         }
 
         .empty-state {
@@ -280,235 +166,58 @@
             color: #666;
             font-style: italic;
         }
-
-        .simulated-url {
-            background: #e9ecef;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 12px;
-            color: #495057;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v1.5.2</h1>
-            <p>Fixed syntax errors</p>
+            <h1>🥖 Bhosky v1.6</h1>
+            <p>Simple test version</p>
         </div>
-
-        <div class="tab-buttons">
-            <button class="tab-btn active" onclick="switchTab('admin')">Admin Panel</button>
-            <button class="tab-btn" onclick="switchTab('customer')">Customer View</button>
-        </div>
-
-        <!-- Admin Panel -->
-        <div id="admin" class="tab-content active">
+        
+        <div class="content">
             <div class="input-group">
                 <label for="customerName">Customer Name:</label>
                 <input type="text" id="customerName" placeholder="Enter customer name">
             </div>
             
-            <button class="btn" onclick="generateQRCode(); console.log('Generate QR button clicked');">Generate QR Code</button>
+            <button class="btn" onclick="testFunction()">Generate QR Code</button>
             
             <!-- QR Code Display Area -->
-            <div id="qrCodeArea" style="display: none;">
-                <div class="qr-code">
-                    <div class="qr-placeholder">
-                        📱 QR Code Generated<br>
-                        <small>Customer scans this</small>
-                    </div>
-                    <div class="simulated-url" id="qrCodeURL">
-                        Waiting for customer to scan...
-                    </div>
-                    <button class="btn" onclick="simulateQRScan()" style="background: #28a745; margin-top: 10px;">
-                        ✅ Simulate QR Scan (for testing)
-                    </button>
+            <div id="qrCodeArea" class="qr-code">
+                <div class="qr-placeholder">
+                    📱 QR Code Generated<br>
+                    <small>Customer scans this</small>
                 </div>
+                <div id="qrCodeURL">
+                    QR Code ready for scan...
+                </div>
+                <button class="btn" onclick="addToQueue()" style="background: #28a745; margin-top: 10px;">
+                    ✅ Simulate QR Scan
+                </button>
             </div>
             
             <!-- Active Orders Queue -->
-            <div id="ordersQueue">
-                <div style="margin: 30px 0 15px 0;">
-                    <h3 style="color: #333; margin-bottom: 10px;">📋 Active Orders Queue</h3>
-                </div>
-                <div id="activeOrdersList">
-                    <div class="empty-state">
-                        No active orders. Generate a QR code above to start!
-                    </div>
-                </div>
+            <div style="margin: 30px 0 15px 0;">
+                <h3 style="color: #333; margin-bottom: 10px;">📋 Active Orders Queue</h3>
             </div>
-        </div>
-
-        <!-- Customer View -->
-        <div id="customer" class="tab-content">
-            <div class="customer-status">
-                <div id="customerInfo">
-                    <p>This is what customers see when they scan the QR code.</p>
-                    <p>To test: Create an order in Admin Panel, then click the button below to simulate scanning the QR code.</p>
-                </div>
-                <div id="simulateSection" style="margin-top: 20px; text-align: center;">
-                    <button class="btn" onclick="simulateQRScan()" id="simulateBtn" style="display: none;">
-                        📱 Simulate QR Code Scan
-                    </button>
+            <div id="activeOrdersList">
+                <div class="empty-state">
+                    No active orders. Generate a QR code above to start!
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Hidden audio for notifications (bell sound) -->
-    <audio id="notificationSound" class="notification-sound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRl4oAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YToqAACBhIqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTuL0fPUfzEIEma97eSXTwwNVqvk77BfGwc4jdXzzHkpBSF0w+/djUIKFF2x6OqqUxQKRJrb8sFuIAU+jdT0z3swCRFkuunnn1ENEM9cBwAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" type="audio/wav">
-    </audio>
-
     <script>
-        // Google Sheets configuration - Simple direct writing method
-        const SHEET_ID = '1OErfclJ6KYOBZdxJ0t9zyUHlXODdJM1oIU4dWia7SBU';
-        
-        // Store orders in memory AND Google Sheets
+        // Simple variables
         let orders = [];
-        let currentCustomerId = null;
+        let pendingCustomerName = '';
 
-        // Save order to Google Sheets using Google Forms method
-        async function saveOrderToSheet(order) {
-            try {
-                // Create a simple way to write to Google Sheets
-                const data = {
-                    'Customer Name': order.customerName,
-                    'Order Time': order.time,
-                    'Status': order.status,
-                    'Date': order.date,
-                    'Order ID': order.id,
-                    'Notes': ''
-                };
-                
-                // We'll use a simple append method
-                const sheetURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
-                
-                // For now, show success message - actual writing will be implemented next
-                console.log('Order saved locally:', order);
-                
-                // Save to browser storage as backup
-                saveToLocalStorage();
-                
-            } catch (error) {
-                console.log('Could not save to sheet:', error);
-                // Still save locally
-                saveToLocalStorage();
-            }
-        }
-
-        // Save orders to browser storage as backup
-        function saveToLocalStorage() {
-            try {
-                localStorage.setItem('bakeryOrders', JSON.stringify(orders));
-            } catch (e) {
-                console.log('Local storage not available');
-            }
-        }
-
-        // Load orders from browser storage
-        function loadFromLocalStorage() {
-            try {
-                const savedOrders = localStorage.getItem('bakeryOrders');
-                if (savedOrders) {
-                    orders = JSON.parse(savedOrders);
-                    displayActiveOrders();
-                }
-            } catch (e) {
-                console.log('Could not load from local storage');
-            }
-        }
-
-        // Update order status in Google Sheets
-        async function updateOrderInSheet(orderId, status) {
-            try {
-                // Find and update the order locally
-                const order = orders.find(o => o.id === orderId);
-                if (order) {
-                    order.status = status;
-                    saveToLocalStorage();
-                }
-                console.log('Order updated locally:', orderId, status);
-            } catch (error) {
-                console.log('Could not update sheet:', error);
-            }
-        }
-
-        // Play notification sound
-        function playNotificationSound() {
-            const audio = document.getElementById('notificationSound');
-            try {
-                audio.currentTime = 0;
-                audio.play().catch(e => {
-                    console.log('Audio play failed:', e);
-                    // Fallback: create beep sound using Web Audio API
-                    createBeepSound();
-                });
-            } catch (e) {
-                console.log('Audio failed:', e);
-                createBeepSound();
-            }
-        }
-
-        // Create beep beep beep sound using Web Audio API
-        function createBeepSound() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                // Create three distinct beeps
-                function playBeep(startTime) {
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    oscillator.frequency.value = 800; // Clear beep frequency
-                    oscillator.type = 'square'; // Sharp beep sound
-                    
-                    gainNode.gain.setValueAtTime(0, startTime);
-                    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
-                    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.15);
-                    gainNode.gain.linearRampToValueAtTime(0, startTime + 0.2);
-                    
-                    oscillator.start(startTime);
-                    oscillator.stop(startTime + 0.2);
-                }
-                
-                // Play three beeps with gaps
-                const now = audioContext.currentTime;
-                playBeep(now);           // First beep
-                playBeep(now + 0.3);     // Second beep  
-                playBeep(now + 0.6);     // Third beep
-                
-            } catch (e) {
-                console.log('Web Audio API not supported');
-            }
-        }
-
-        // Enhanced vibration pattern
-        function vibratePhone() {
-            if ('vibrate' in navigator) {
-                // Strong vibration pattern: long-short-long-short-long
-                navigator.vibrate([500, 200, 500, 200, 500]);
-            }
-        }
-        // Switch between admin and customer tabs
-        // Switch between admin and customer tabs
-        function switchTab(tab) {
-            console.log('Switching to tab:', tab);
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        // Test function that should definitely work
+        function testFunction() {
+            alert('Button clicked! Function is working.');
             
-            event.target.classList.add('active');
-            document.getElementById(tab).classList.add('active');
-        }
-
-        // Create a new order
-        function createOrder() {
             const customerName = document.getElementById('customerName').value.trim();
             
             if (!customerName) {
@@ -516,220 +225,93 @@
                 return;
             }
 
+            pendingCustomerName = customerName;
+            
+            // Show QR code area
+            document.getElementById('qrCodeArea').style.display = 'block';
+            document.getElementById('qrCodeURL').innerHTML = `QR Code for: <strong>${customerName}</strong>`;
+            
+            // Clear input
+            document.getElementById('customerName').value = '';
+        }
+
+        // Add to queue function
+        function addToQueue() {
+            if (!pendingCustomerName) {
+                alert('Generate a QR code first!');
+                return;
+            }
+
             const order = {
                 id: Date.now(),
-                customerName: customerName,
+                customerName: pendingCustomerName,
                 time: new Date().toLocaleTimeString(),
-                date: new Date().toLocaleDateString(),
-                status: 'waiting',
-                notified: false
+                status: 'waiting'
             };
 
             orders.push(order);
-            document.getElementById('customerName').value = '';
             
-            // Save to Google Sheets
-            saveOrderToSheet(order);
+            // Hide QR code area
+            document.getElementById('qrCodeArea').style.display = 'none';
+            pendingCustomerName = '';
             
-            displayOrders();
+            // Update display
+            displayQueue();
+            
+            alert(`${order.customerName} added to queue!`);
         }
 
-        // Display all orders in admin panel
-        function displayOrders() {
-            const ordersList = document.getElementById('ordersList');
+        // Display queue
+        function displayQueue() {
+            const list = document.getElementById('activeOrdersList');
             
             if (orders.length === 0) {
-                ordersList.innerHTML = '<div class="empty-state">No orders yet. Add a customer above!</div>';
-                // Hide simulate button when no orders
-                document.getElementById('simulateBtn').style.display = 'none';
+                list.innerHTML = '<div class="empty-state">No active orders. Generate a QR code above to start!</div>';
                 return;
             }
 
-            // Show simulate button when orders exist
-            document.getElementById('simulateBtn').style.display = 'block';
-
             let html = '';
-            orders.forEach(order => {
-                const statusClass = order.status === 'ready' ? 'ready' : '';
+            orders.forEach((order, index) => {
+                const queueNumber = index + 1;
                 html += `
-                    <div class="order-item ${statusClass}">
-                        <div class="order-header">
-                            <div class="customer-name">${order.customerName}</div>
-                            <div class="order-time">${order.time}</div>
+                    <div class="queue-item ${order.status === 'buzzed' ? 'buzzed' : ''}">
+                        <div class="queue-number">${queueNumber}</div>
+                        <div class="customer-info">
+                            <div style="font-weight: 600;">${order.customerName}</div>
+                            <div style="font-size: 12px; color: #666;">${order.time}</div>
                         </div>
-                        <div class="qr-code">
-                            <div class="qr-placeholder">
-                                📱 QR Code<br>
-                                (Customer scans this)
-                            </div>
-                            <div class="simulated-url">
-                                URL: bakery.com/order/${order.id}
-                            </div>
+                        <div class="queue-actions">
+                            ${order.status === 'waiting' ? 
+                                `<button class="btn buzz-btn small-btn" onclick="buzzCustomer(${order.id})">🔔 Buzz</button>` : 
+                                `<button class="btn small-btn" onclick="markCollected(${order.id})" style="background: #28a745;">✅ Collected</button>`
+                            }
                         </div>
-                        <button class="btn buzz-btn" onclick="buzzCustomer(${order.id})" 
-                                ${order.status === 'ready' ? 'disabled' : ''}>
-                            ${order.status === 'ready' ? 'Order Ready!' : 'Buzz Customer'}
-                        </button>
-                        <button class="btn" onclick="exportToSheet()" style="margin-top: 10px; background: #28a745; font-size: 12px; padding: 8px 16px;">
-                            📊 Export to Google Sheet
-                        </button>
                     </div>
                 `;
             });
 
-            ordersList.innerHTML = html;
+            list.innerHTML = html;
         }
 
-        // Save completed orders for Google Sheets export
-        let completedOrders = [];
-
-        function saveCompletedOrder(order) {
-            completedOrders.push(order);
-            // Save completed orders to local storage too
-            try {
-                localStorage.setItem('bakeryCompletedOrders', JSON.stringify(completedOrders));
-            } catch (e) {
-                console.log('Could not save completed orders');
-            }
-        }
-
-        // Load completed orders from storage
-        function loadCompletedOrders() {
-            try {
-                const saved = localStorage.getItem('bakeryCompletedOrders');
-                if (saved) {
-                    completedOrders = JSON.parse(saved);
-                }
-            } catch (e) {
-                console.log('Could not load completed orders');
-            }
-        }
-
-        // Export completed orders to Google Sheets
-        function exportToSheet() {
-            if (completedOrders.length === 0) {
-                alert('No completed orders to export!');
-                return;
-            }
-            
-            // Create CSV format data
-            let csvData = 'Customer Name,Order Time,Buzzed Time,Collected Time,Date,Order ID\n';
-            completedOrders.forEach(order => {
-                csvData += `"${order.customerName}","${order.time}","${order.buzzedTime || 'N/A'}","${order.collectedTime}","${order.date}","${order.id}"\n`;
-            });
-            
-            // Create downloadable file
-            const blob = new Blob([csvData], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `bakery-completed-orders-${new Date().toLocaleDateString()}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            alert(`${completedOrders.length} completed orders exported as CSV!`);
-        }
-        }
-
-        // Buzz a customer (notify them order is ready)
+        // Buzz customer
         function buzzCustomer(orderId) {
             const order = orders.find(o => o.id === orderId);
             if (order) {
-                order.status = 'ready';
-                order.notified = true;
-                
-                // Update in Google Sheets
-                updateOrderInSheet(orderId, 'ready');
-                
-                displayOrders();
-                
-                // If customer view is showing this order, update it
-                if (currentCustomerId === orderId) {
-                    showCustomerStatus(orderId);
-                }
-                
-                alert(`${order.customerName} has been notified! Their phone should buzz/beep.`);
+                order.status = 'buzzed';
+                displayQueue();
+                alert(`${order.customerName} has been buzzed!`);
             }
         }
 
-        // Simulate customer scanning QR code
-        function showCustomerStatus(orderId) {
+        // Mark collected
+        function markCollected(orderId) {
             const order = orders.find(o => o.id === orderId);
-            const customerInfo = document.getElementById('customerInfo');
-            currentCustomerId = orderId;
-            
-            if (!order) {
-                customerInfo.innerHTML = '<p>Order not found!</p>';
-                return;
-            }
-
-            if (order.status === 'ready') {
-                customerInfo.innerHTML = `
-                    <div class="pickup-alert">
-                        🔔 Your order is ready for pickup!
-                    </div>
-                    <div class="ready-message">
-                        Hi ${order.customerName}!<br>
-                        Please come to the counter
-                    </div>
-                    <p>Order placed at: ${order.time}</p>
-                `;
-                
-                // Multi-modal notification
-                vibratePhone();        // Vibration (Android)
-                playNotificationSound(); // Sound (All devices)
-                
-                // Flash the screen
-                document.body.style.background = '#ff6b6b';
-                setTimeout(() => {
-                    document.body.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)';
-                }, 200);
-            } else {
-                customerInfo.innerHTML = `
-                    <div class="waiting-message">
-                        ⏳ Please wait...
-                    </div>
-                    <p>Hi ${order.customerName}!</p>
-                    <p>Your order is being prepared.</p>
-                    <p>We'll notify you when it's ready.</p>
-                    <p>Order placed at: ${order.time}</p>
-                `;
+            if (order) {
+                orders = orders.filter(o => o.id !== orderId);
+                displayQueue();
+                alert(`${order.customerName}'s order collected!`);
             }
         }
-
-        // Simulate customer clicking on a QR code
-        function simulateQRScan() {
-            if (orders.length > 0) {
-                // Use the most recent order for simulation
-                const lastOrder = orders[orders.length - 1];
-                showCustomerStatus(lastOrder.id);
-                
-                // Update the customer info to show it's connected
-                const customerInfo = document.getElementById('customerInfo');
-                if (lastOrder.status !== 'ready') {
-                    // Add a note that this is the simulated scan
-                    const waitingDiv = document.querySelector('.waiting-message');
-                    if (waitingDiv) {
-                        waitingDiv.innerHTML += '<br><small style="color: #666; font-size: 14px;">(QR Code Scanned Successfully)</small>';
-                    }
-                }
-            } else {
-                alert('Create an order first in Admin Panel!');
-            }
-        }
-
-        // Auto-refresh customer view every 3 seconds
-        setInterval(() => {
-            if (currentCustomerId && document.getElementById('customer').classList.contains('active')) {
-                showCustomerStatus(currentCustomerId);
-            }
-        }, 3000);
-
-        // Load orders when app starts
-        window.addEventListener('load', function() {
-            loadFromLocalStorage();
-            loadCompletedOrders();
-        });
     </script>
 </body>
 </html>
