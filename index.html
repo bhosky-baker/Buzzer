@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakery Order System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            background: #f8f9fa;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn.buzz-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            width: auto;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        .btn.buzz-btn:hover {
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .order-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .order-item.ready {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .customer-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .order-time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .qr-code {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 15px 0;
+            border: 2px dashed #ddd;
+        }
+
+        .qr-placeholder {
+            width: 150px;
+            height: 150px;
+            background: #f0f0f0;
+            margin: 0 auto 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .customer-status {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .waiting-message {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .ready-message {
+            font-size: 28px;
+            color: #28a745;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pickup-alert {
+            background: #ff6b6b;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .simulated-url {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #495057;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🥖 Bakery Order System</h1>
+            <p>Order management and customer notifications</p>
+        </div>
+
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="switchTab('admin')">Admin Panel</button>
+            <button class="tab-btn" onclick="switchTab('customer')">Customer View</button>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="admin" class="tab-content active">
+            <div class="input-group">
+                <label for="customerName">Customer Name:</label>
+                <input type="text" id="customerName" placeholder="Enter customer name">
+            </div>
+            
+            <button class="btn" onclick="createOrder()">Create Order & Generate QR</button>
+            
+            <div id="ordersList">
+                <div class="empty-state">
+                    No orders yet. Add a customer above!
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer View -->
+        <div id="customer" class="tab-content">
+            <div class="customer-status">
+                <div id="customerInfo">
+                    <p>This is what customers see when they scan the QR code.</p>
+                    <p>Switch to Admin Panel to create an order, then come back here to see the customer experience.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store orders in memory
+        let orders = [];
+        let currentCustomerId = null;
+
+        // Switch between admin and customer tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+
+        // Create a new order
+        function createOrder() {
+            const customerName = document.getElementById('customerName').value.trim();
+            
+            if (!customerName) {
+                alert('Please enter a customer name!');
+                return;
+            }
+
+            const order = {
+                id: Date.now(),
+                customerName: customerName,
+                time: new Date().toLocaleTimeString(),
+                status: 'waiting',
+                notified: false
+            };
+
+            orders.push(order);
+            document.getElementById('customerName').value = '';
+            displayOrders();
+        }
+
+        // Display all orders in admin panel
+        function displayOrders() {
+            const ordersList = document.getElementById('ordersList');
+            
+            if (orders.length === 0) {
+                ordersList.innerHTML = '<div class="empty-state">No orders yet. Add a customer above!</div>';
+                return;
+            }
+
+            let html = '';
+            orders.forEach(order => {
+                const statusClass = order.status === 'ready' ? 'ready' : '';
+                html += `
+                    <div class="order-item ${statusClass}">
+                        <div class="order-header">
+                            <div class="customer-name">${order.customerName}</div>
+                            <div class="order-time">${order.time}</div>
+                        </div>
+                        <div class="qr-code">
+                            <div class="qr-placeholder">
+                                📱 QR Code<br>
+                                (Customer scans this)
+                            </div>
+                            <div class="simulated-url">
+                                URL: bakery.com/order/${order.id}
+                            </div>
+                        </div>
+                        <button class="btn buzz-btn" onclick="buzzCustomer(${order.id})" 
+                                ${order.status === 'ready' ? 'disabled' : ''}>
+                            ${order.status === 'ready' ? 'Order Ready!' : 'Buzz Customer'}
+                        </button>
+                    </div>
+                `;
+            });
+
+            ordersList.innerHTML = html;
+        }
+
+        // Buzz a customer (notify them order is ready)
+        function buzzCustomer(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                order.status = 'ready';
+                order.notified = true;
+                displayOrders();
+                
+                // If customer view is showing this order, update it
+                if (currentCustomerId === orderId) {
+                    showCustomerStatus(orderId);
+                }
+                
+                alert(`${order.customerName} has been notified! Their phone should vibrate.`);
+            }
+        }
+
+        // Simulate customer scanning QR code
+        function showCustomerStatus(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            const customerInfo = document.getElementById('customerInfo');
+            currentCustomerId = orderId;
+            
+            if (!order) {
+                customerInfo.innerHTML = '<p>Order not found!</p>';
+                return;
+            }
+
+            if (order.status === 'ready') {
+                customerInfo.innerHTML = `
+                    <div class="pickup-alert">
+                        📳 Your order is ready for pickup!
+                    </div>
+                    <div class="ready-message">
+                        Hi ${order.customerName}!<br>
+                        Please come to the counter
+                    </div>
+                    <p>Order placed at: ${order.time}</p>
+                `;
+                
+                // Try to vibrate the phone
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([200, 100, 200, 100, 200]);
+                }
+            } else {
+                customerInfo.innerHTML = `
+                    <div class="waiting-message">
+                        ⏳ Please wait...
+                    </div>
+                    <p>Hi ${order.customerName}!</p>
+                    <p>Your order is being prepared.</p>
+                    <p>We'll notify you when it's ready.</p>
+                    <p>Order placed at: ${order.time}</p>
+                `;
+            }
+        }
+
+        // Simulate customer clicking on a QR code
+        function simulateQRScan() {
+            if (orders.length > 0) {
+                const lastOrder = orders[orders.length - 1];
+                showCustomerStatus(lastOrder.id);
+                switchTab('customer');
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            }
+        }
+
+        // Auto-refresh customer view every 3 seconds
+        setInterval(() => {
+            if (currentCustomerId && document.getElementById('customer').classList.contains('active')) {
+                showCustomerStatus(currentCustomerId);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
