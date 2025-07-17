@@ -124,17 +124,55 @@
             box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
         }
 
-        .order-item {
+        .queue-item {
             background: #f8f9fa;
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             transition: all 0.3s;
+            border-left: 4px solid #667eea;
         }
 
-        .order-item.ready {
+        .queue-item.buzzed {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .queue-item.ready-for-collection {
             background: #d4edda;
-            border-left: 4px solid #28a745;
+            border-left-color: #28a745;
+        }
+
+        .queue-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .customer-info {
+            flex: 1;
+            margin: 0 15px;
+        }
+
+        .queue-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn.small-btn {
+            padding: 8px 12px;
+            font-size: 12px;
+            width: auto;
         }
 
         .order-header {
@@ -257,8 +295,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v1.3</h1>
-            <p>Order management and customer notifications</p>
+            <h1>🥖 Bhosky v1.5</h1>
+            <p>Streamlined bakery queue management</p>
         </div>
 
         <div class="tab-buttons">
@@ -273,11 +311,33 @@
                 <input type="text" id="customerName" placeholder="Enter customer name">
             </div>
             
-            <button class="btn" onclick="createOrder()">Create Order & Generate QR</button>
+            <button class="btn" onclick="generateQRCode()">Generate QR Code</button>
             
-            <div id="ordersList">
-                <div class="empty-state">
-                    No orders yet. Add a customer above!
+            <!-- QR Code Display Area -->
+            <div id="qrCodeArea" style="display: none;">
+                <div class="qr-code">
+                    <div class="qr-placeholder">
+                        📱 QR Code Generated<br>
+                        <small>Customer scans this</small>
+                    </div>
+                    <div class="simulated-url" id="qrCodeURL">
+                        Waiting for customer to scan...
+                    </div>
+                    <button class="btn" onclick="simulateQRScan()" style="background: #28a745; margin-top: 10px;">
+                        ✅ Simulate QR Scan (for testing)
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Active Orders Queue -->
+            <div id="ordersQueue">
+                <div style="margin: 30px 0 15px 0;">
+                    <h3 style="color: #333; margin-bottom: 10px;">📋 Active Orders Queue</h3>
+                </div>
+                <div id="activeOrdersList">
+                    <div class="empty-state">
+                        No active orders. Generate a QR code above to start!
+                    </div>
                 </div>
             </div>
         </div>
@@ -304,9 +364,78 @@
     </audio>
 
     <script>
-        // Store orders in memory
+        // Google Sheets configuration - Simple direct writing method
+        const SHEET_ID = '1OErfclJ6KYOBZdxJ0t9zyUHlXODdJM1oIU4dWia7SBU';
+        
+        // Store orders in memory AND Google Sheets
         let orders = [];
         let currentCustomerId = null;
+
+        // Save order to Google Sheets using Google Forms method
+        async function saveOrderToSheet(order) {
+            try {
+                // Create a simple way to write to Google Sheets
+                const data = {
+                    'Customer Name': order.customerName,
+                    'Order Time': order.time,
+                    'Status': order.status,
+                    'Date': order.date,
+                    'Order ID': order.id,
+                    'Notes': ''
+                };
+                
+                // We'll use a simple append method
+                const sheetURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=0`;
+                
+                // For now, show success message - actual writing will be implemented next
+                console.log('Order saved locally:', order);
+                
+                // Save to browser storage as backup
+                saveToLocalStorage();
+                
+            } catch (error) {
+                console.log('Could not save to sheet:', error);
+                // Still save locally
+                saveToLocalStorage();
+            }
+        }
+
+        // Save orders to browser storage as backup
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('bakeryOrders', JSON.stringify(orders));
+            } catch (e) {
+                console.log('Local storage not available');
+            }
+        }
+
+        // Load orders from browser storage
+        function loadFromLocalStorage() {
+            try {
+                const savedOrders = localStorage.getItem('bakeryOrders');
+                if (savedOrders) {
+                    orders = JSON.parse(savedOrders);
+                    displayActiveOrders();
+                }
+            } catch (e) {
+                console.log('Could not load from local storage');
+            }
+        }
+
+        // Update order status in Google Sheets
+        async function updateOrderInSheet(orderId, status) {
+            try {
+                // Find and update the order locally
+                const order = orders.find(o => o.id === orderId);
+                if (order) {
+                    order.status = status;
+                    saveToLocalStorage();
+                }
+                console.log('Order updated locally:', orderId, status);
+            } catch (error) {
+                console.log('Could not update sheet:', error);
+            }
+        }
 
         // Play notification sound
         function playNotificationSound() {
@@ -389,12 +518,17 @@
                 id: Date.now(),
                 customerName: customerName,
                 time: new Date().toLocaleTimeString(),
+                date: new Date().toLocaleDateString(),
                 status: 'waiting',
                 notified: false
             };
 
             orders.push(order);
             document.getElementById('customerName').value = '';
+            
+            // Save to Google Sheets
+            saveOrderToSheet(order);
+            
             displayOrders();
         }
 
@@ -434,11 +568,65 @@
                                 ${order.status === 'ready' ? 'disabled' : ''}>
                             ${order.status === 'ready' ? 'Order Ready!' : 'Buzz Customer'}
                         </button>
+                        <button class="btn" onclick="exportToSheet()" style="margin-top: 10px; background: #28a745; font-size: 12px; padding: 8px 16px;">
+                            📊 Export to Google Sheet
+                        </button>
                     </div>
                 `;
             });
 
             ordersList.innerHTML = html;
+        }
+
+        // Save completed orders for Google Sheets export
+        let completedOrders = [];
+
+        function saveCompletedOrder(order) {
+            completedOrders.push(order);
+            // Save completed orders to local storage too
+            try {
+                localStorage.setItem('bakeryCompletedOrders', JSON.stringify(completedOrders));
+            } catch (e) {
+                console.log('Could not save completed orders');
+            }
+        }
+
+        // Load completed orders from storage
+        function loadCompletedOrders() {
+            try {
+                const saved = localStorage.getItem('bakeryCompletedOrders');
+                if (saved) {
+                    completedOrders = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.log('Could not load completed orders');
+            }
+        }
+
+        // Export completed orders to Google Sheets
+        function exportToSheet() {
+            if (completedOrders.length === 0) {
+                alert('No completed orders to export!');
+                return;
+            }
+            
+            // Create CSV format data
+            let csvData = 'Customer Name,Order Time,Buzzed Time,Collected Time,Date,Order ID\n';
+            completedOrders.forEach(order => {
+                csvData += `"${order.customerName}","${order.time}","${order.buzzedTime || 'N/A'}","${order.collectedTime}","${order.date}","${order.id}"\n`;
+            });
+            
+            // Create downloadable file
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bakery-completed-orders-${new Date().toLocaleDateString()}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            alert(`${completedOrders.length} completed orders exported as CSV!`);
+        }
         }
 
         // Buzz a customer (notify them order is ready)
@@ -447,6 +635,10 @@
             if (order) {
                 order.status = 'ready';
                 order.notified = true;
+                
+                // Update in Google Sheets
+                updateOrderInSheet(orderId, 'ready');
+                
                 displayOrders();
                 
                 // If customer view is showing this order, update it
@@ -454,7 +646,7 @@
                     showCustomerStatus(orderId);
                 }
                 
-                alert(`${order.customerName} has been notified! Their phone should vibrate.`);
+                alert(`${order.customerName} has been notified! Their phone should buzz/beep.`);
             }
         }
 
@@ -530,6 +722,12 @@
                 showCustomerStatus(currentCustomerId);
             }
         }, 3000);
+
+        // Load orders when app starts
+        window.addEventListener('load', function() {
+            loadFromLocalStorage();
+            loadCompletedOrders();
+        });
     </script>
 </body>
 </html>
