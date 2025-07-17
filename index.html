@@ -250,8 +250,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v2.7</h1>
-            <p>Cross-device notifications via Google Sheets</p>
+            <h1>🥖 Bhosky v2.8</h1>
+            <p>Fixed Google Sheets buzz notifications</p>
         </div>
 
         <div class="tab-buttons">
@@ -426,25 +426,6 @@
             
             // Check Google Sheets for cross-device updates
             checkOrderStatusFromSheet();
-            
-            // Also check local storage for same-browser updates
-            try {
-                const notificationData = JSON.parse(localStorage.getItem('buzzer_notification') || sessionStorage.getItem('buzzer_notification') || '{}');
-                
-                if (notificationData.orderId === currentCustomerId && notificationData.status === 'buzzed') {
-                    const order = orders.find(o => o.id === currentCustomerId);
-                    if (order && order.status !== 'buzzed') {
-                        order.status = 'buzzed';
-                        showCustomerStatus(currentCustomerId);
-                        
-                        // Clear the notification
-                        localStorage.removeItem('buzzer_notification');
-                        sessionStorage.removeItem('buzzer_notification');
-                    }
-                }
-            } catch (e) {
-                console.log('Could not check local notifications');
-            }
         }
         async function sendBuzzStatusToSheet(orderId, customerName, status) {
             try {
@@ -600,33 +581,63 @@
             if (!currentCustomerId) return;
             
             try {
-                // Use Google Sheets as a simple database to check order status
-                const sheetURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
+                // Check the 'Buzzer' sheet for buzz notifications
+                const buzzerSheetURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Buzzer`;
                 
-                const response = await fetch(sheetURL);
+                const response = await fetch(buzzerSheetURL);
                 const csvText = await response.text();
                 
                 // Parse CSV to find our order
                 const lines = csvText.split('\n');
-                const currentOrder = lines.find(line => line.includes(currentCustomerId.toString()));
                 
-                if (currentOrder) {
-                    // Check if status column contains "buzzed"
-                    const columns = currentOrder.split(',');
-                    if (columns.length > 2 && columns[2].includes('buzzed')) {
-                        // Order has been buzzed!
-                        const order = orders.find(o => o.id === currentCustomerId);
-                        if (order && order.status !== 'buzzed') {
-                            order.status = 'buzzed';
-                            showCustomerStatus(currentCustomerId);
-                            console.log('Customer detected buzz from Google Sheet');
+                // Look for our order ID in the Buzzer sheet
+                for (let i = 1; i < lines.length; i++) { // Skip header row
+                    const line = lines[i];
+                    if (line && line.includes(currentCustomerId.toString())) {
+                        // Found our order in the buzzer sheet - check status
+                        const columns = line.split(',');
+                        if (columns.length > 2 && columns[2] && columns[2].toLowerCase().includes('buzz')) {
+                            // Order has been buzzed!
+                            const order = orders.find(o => o.id === currentCustomerId);
+                            if (order && order.status !== 'buzzed') {
+                                order.status = 'buzzed';
+                                showCustomerStatus(currentCustomerId);
+                                console.log('Customer detected buzz from Google Sheet!');
+                                return;
+                            }
                         }
                     }
                 }
+                
+                console.log('No buzz notification found for order:', currentCustomerId);
+                
             } catch (error) {
-                console.log('Could not check Google Sheet status:', error);
+                console.log('Could not check Buzzer sheet:', error);
                 // Fallback to local storage check
-                checkForNotifications();
+                checkForLocalNotifications();
+            }
+        }
+
+        // Check local notifications (renamed for clarity)
+        function checkForLocalNotifications() {
+            if (!currentCustomerId) return;
+            
+            try {
+                const notificationData = JSON.parse(localStorage.getItem('buzzer_notification') || sessionStorage.getItem('buzzer_notification') || '{}');
+                
+                if (notificationData.orderId === currentCustomerId && notificationData.status === 'buzzed') {
+                    const order = orders.find(o => o.id === currentCustomerId);
+                    if (order && order.status !== 'buzzed') {
+                        order.status = 'buzzed';
+                        showCustomerStatus(currentCustomerId);
+                        
+                        // Clear the notification
+                        localStorage.removeItem('buzzer_notification');
+                        sessionStorage.removeItem('buzzer_notification');
+                    }
+                }
+            } catch (e) {
+                console.log('Could not check local notifications');
             }
         }
 
