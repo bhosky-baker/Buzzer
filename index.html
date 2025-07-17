@@ -254,8 +254,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v2.4</h1>
-            <p>Clean QR codes + customer-only view</p>
+            <h1>🥖 Bhosky v2.5</h1>
+            <p>Enhanced real-time notifications</p>
         </div>
 
         <div class="tab-buttons">
@@ -680,28 +680,49 @@
             }
         }
 
-        // Play notification (sound + vibration) - requires user interaction
+        // Play notification (sound + vibration) - enhanced for mobile
         function playNotification() {
-            // Vibration - needs user gesture first
+            console.log('Playing notification for customer');
+            
+            // Vibration - multiple patterns for better effect
             if ('vibrate' in navigator) {
-                // Try vibration
-                navigator.vibrate([500, 200, 500, 200, 500]);
+                navigator.vibrate([200, 100, 200, 100, 200, 100, 500]);
                 console.log('Vibration triggered');
             } else {
                 console.log('Vibration not supported on this device');
             }
             
-            // Screen flash
-            document.body.style.background = '#ff6b6b';
+            // Screen flash - more noticeable
+            document.body.style.background = '#ff4757';
             setTimeout(() => {
-                document.body.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)';
+                document.body.style.background = '#ff6b6b';
+                setTimeout(() => {
+                    document.body.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)';
+                }, 300);
             }, 200);
 
-            // Multiple beep sounds
+            // Play beep sequence
             try {
                 playBeepSequence();
             } catch (e) {
                 console.log('Audio not supported:', e);
+            }
+
+            // Show browser notification if supported
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('🔔 Order Ready!', {
+                    body: 'Your bakery order is ready for pickup!',
+                    icon: '/favicon.ico'
+                });
+            } else if ('Notification' in window && Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('🔔 Order Ready!', {
+                            body: 'Your bakery order is ready for pickup!',
+                            icon: '/favicon.ico'
+                        });
+                    }
+                });
             }
         }
 
@@ -764,14 +785,30 @@
             document.getElementById('completedCount').textContent = completedOrders.length;
         }
 
-        // Save to local storage
+        // Save to local storage and broadcast to other tabs/devices
         function saveToLocalStorage() {
             try {
                 localStorage.setItem('bakeryActiveOrders', JSON.stringify(orders));
+                // Trigger storage event for other tabs/windows
+                window.dispatchEvent(new Event('storage'));
             } catch (e) {
                 console.log('Local storage not available');
             }
         }
+
+        // Listen for storage changes from other tabs/windows
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'bakeryActiveOrders') {
+                loadFromLocalStorage();
+                // If customer is viewing their order, refresh their status
+                if (currentCustomerId) {
+                    const order = orders.find(o => o.id === currentCustomerId);
+                    if (order) {
+                        showCustomerStatus(currentCustomerId);
+                    }
+                }
+            }
+        });
 
         // Save completed orders to local storage
         function saveCompletedOrders() {
@@ -782,13 +819,18 @@
             }
         }
 
-        // Load from local storage
+        // Load from local storage and refresh display
         function loadFromLocalStorage() {
             try {
                 const savedOrders = localStorage.getItem('bakeryActiveOrders');
                 if (savedOrders) {
-                    orders = JSON.parse(savedOrders);
-                    displayActiveOrders();
+                    const newOrders = JSON.parse(savedOrders);
+                    // Check if orders actually changed
+                    if (JSON.stringify(orders) !== JSON.stringify(newOrders)) {
+                        orders = newOrders;
+                        displayActiveOrders();
+                        console.log('Orders updated from storage');
+                    }
                 }
                 
                 const savedCompleted = localStorage.getItem('bakeryCompletedOrders');
@@ -801,12 +843,16 @@
             }
         }
 
-        // Auto-refresh customer view every 3 seconds
+        // Auto-refresh customer view every 2 seconds (more frequent for better responsiveness)
         setInterval(() => {
             if (currentCustomerId && document.getElementById('customer').classList.contains('active')) {
-                showCustomerStatus(currentCustomerId);
+                // Check if this customer still exists in orders (not collected yet)
+                const order = orders.find(o => o.id === currentCustomerId);
+                if (order) {
+                    showCustomerStatus(currentCustomerId);
+                }
             }
-        }, 3000);
+        }, 2000);
 
         // Load saved data when app starts
         window.addEventListener('load', function() {
