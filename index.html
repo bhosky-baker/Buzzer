@@ -295,8 +295,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v1.5</h1>
-            <p>Streamlined bakery queue management</p>
+            <h1>🥖 Bhosky v1.5.1</h1>
+            <p>Debug version - check console for errors</p>
         </div>
 
         <div class="tab-buttons">
@@ -311,7 +311,7 @@
                 <input type="text" id="customerName" placeholder="Enter customer name">
             </div>
             
-            <button class="btn" onclick="generateQRCode()">Generate QR Code</button>
+            <button class="btn" onclick="generateQRCode(); console.log('Generate QR button clicked');">Generate QR Code</button>
             
             <!-- QR Code Display Area -->
             <div id="qrCodeArea" style="display: none;">
@@ -497,7 +497,9 @@
             }
         }
         // Switch between admin and customer tabs
+        // Switch between admin and customer tabs
         function switchTab(tab) {
+            console.log('Switching to tab:', tab);
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
