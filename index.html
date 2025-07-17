@@ -257,7 +257,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v1.1</h1>
+            <h1>🥖 Bhosky v1.2</h1>
             <p>Order management and customer notifications</p>
         </div>
 
@@ -329,8 +329,8 @@
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Create a bell-like sound with multiple frequencies
-                function playBellTone(frequency, startTime, duration, volume) {
+                // Create a proper bell sound with longer duration
+                function playBellTone(frequency, startTime, duration, volume, attack, decay) {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
                     
@@ -340,19 +340,28 @@
                     oscillator.frequency.value = frequency;
                     oscillator.type = 'sine';
                     
-                    gainNode.gain.setValueAtTime(volume, startTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    // Create bell-like envelope: quick attack, slow decay
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(volume, startTime + attack);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
                     
                     oscillator.start(startTime);
                     oscillator.stop(startTime + duration);
                 }
                 
-                // Create bell sound with harmonics (like a real bell)
+                // Create a beautiful bell sound with multiple harmonics and longer ring
                 const now = audioContext.currentTime;
-                playBellTone(800, now, 1.0, 0.3);      // Main tone
-                playBellTone(1000, now, 0.8, 0.2);     // Higher harmonic
-                playBellTone(600, now, 1.2, 0.15);     // Lower harmonic
-                playBellTone(1200, now, 0.6, 0.1);     // Even higher harmonic
+                const bellDuration = 2.5; // Much longer bell ring
+                
+                // Main bell tones with proper bell harmonics
+                playBellTone(523, now, bellDuration, 0.4, 0.01, 0.3);     // C5 - main tone
+                playBellTone(659, now, bellDuration * 0.8, 0.25, 0.02, 0.4); // E5 - major third
+                playBellTone(784, now, bellDuration * 0.6, 0.15, 0.03, 0.5); // G5 - fifth
+                playBellTone(1047, now, bellDuration * 0.4, 0.1, 0.01, 0.3); // C6 - octave
+                
+                // Add some lower harmonics for richness
+                playBellTone(415, now, bellDuration * 1.1, 0.2, 0.05, 0.2); // Lower harmonic
+                playBellTone(330, now, bellDuration * 1.2, 0.15, 0.08, 0.15); // Even lower
                 
             } catch (e) {
                 console.log('Web Audio API not supported');
