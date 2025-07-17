@@ -257,7 +257,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v1.2</h1>
+            <h1>🥖 Bhosky v1.3</h1>
             <p>Order management and customer notifications</p>
         </div>
 
@@ -324,44 +324,36 @@
             }
         }
 
-        // Create bell sound using Web Audio API as fallback
+        // Create beep beep beep sound using Web Audio API
         function createBeepSound() {
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Create a proper bell sound with longer duration
-                function playBellTone(frequency, startTime, duration, volume, attack, decay) {
+                // Create three distinct beeps
+                function playBeep(startTime) {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
                     
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
                     
-                    oscillator.frequency.value = frequency;
-                    oscillator.type = 'sine';
+                    oscillator.frequency.value = 800; // Clear beep frequency
+                    oscillator.type = 'square'; // Sharp beep sound
                     
-                    // Create bell-like envelope: quick attack, slow decay
                     gainNode.gain.setValueAtTime(0, startTime);
-                    gainNode.gain.linearRampToValueAtTime(volume, startTime + attack);
-                    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+                    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.15);
+                    gainNode.gain.linearRampToValueAtTime(0, startTime + 0.2);
                     
                     oscillator.start(startTime);
-                    oscillator.stop(startTime + duration);
+                    oscillator.stop(startTime + 0.2);
                 }
                 
-                // Create a beautiful bell sound with multiple harmonics and longer ring
+                // Play three beeps with gaps
                 const now = audioContext.currentTime;
-                const bellDuration = 2.5; // Much longer bell ring
-                
-                // Main bell tones with proper bell harmonics
-                playBellTone(523, now, bellDuration, 0.4, 0.01, 0.3);     // C5 - main tone
-                playBellTone(659, now, bellDuration * 0.8, 0.25, 0.02, 0.4); // E5 - major third
-                playBellTone(784, now, bellDuration * 0.6, 0.15, 0.03, 0.5); // G5 - fifth
-                playBellTone(1047, now, bellDuration * 0.4, 0.1, 0.01, 0.3); // C6 - octave
-                
-                // Add some lower harmonics for richness
-                playBellTone(415, now, bellDuration * 1.1, 0.2, 0.05, 0.2); // Lower harmonic
-                playBellTone(330, now, bellDuration * 1.2, 0.15, 0.08, 0.15); // Even lower
+                playBeep(now);           // First beep
+                playBeep(now + 0.3);     // Second beep  
+                playBeep(now + 0.6);     // Third beep
                 
             } catch (e) {
                 console.log('Web Audio API not supported');
