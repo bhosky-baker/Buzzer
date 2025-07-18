@@ -236,22 +236,30 @@
             border-top: 2px solid #e9ecef;
         }
 
-        .buzz-url {
-            background: #e3f2fd;
+        .connection-status {
             padding: 10px;
             border-radius: 5px;
             margin: 10px 0;
-            font-family: monospace;
+            text-align: center;
             font-size: 12px;
-            word-break: break-all;
+        }
+
+        .connection-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v4.0</h1>
-            <p>Simple URL-based notifications</p>
+            <h1>🥖 Bhosky v5.0</h1>
+            <p>Real-time cross-device notifications</p>
         </div>
 
         <div class="tab-buttons">
@@ -261,6 +269,10 @@
 
         <!-- Admin Panel -->
         <div id="admin" class="tab-content active">
+            <div id="connectionStatus" class="connection-status disconnected">
+                🔄 Connecting to notification service...
+            </div>
+
             <div class="input-group">
                 <label for="customerName">Customer Name:</label>
                 <input type="text" id="customerName" placeholder="Enter customer name">
@@ -312,10 +324,94 @@
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFz31v-wwrAgtJgz35BM4v0Kohk6gc5TKC_SFRPwqZ2p_Kvrpy73iEOE8TU42UCUPp/exec';
         
+        // Using Firebase Realtime Database for cross-device notifications
+        const FIREBASE_URL = 'https://bakery-buzzer-default-rtdb.firebaseio.com';
+        
         let orders = [];
         let completedOrders = [];
         let pendingCustomerName = '';
         let currentCustomerId = null;
+        let isConnected = false;
+
+        // Initialize Firebase connection
+        function initializeFirebase() {
+            // Test Firebase connection
+            fetch(`${FIREBASE_URL}/.json`)
+                .then(response => response.json())
+                .then(() => {
+                    isConnected = true;
+                    updateConnectionStatus();
+                    console.log('Connected to notification service');
+                })
+                .catch(() => {
+                    isConnected = false;
+                    updateConnectionStatus();
+                    console.log('Failed to connect to notification service');
+                });
+        }
+
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            if (isConnected) {
+                statusEl.className = 'connection-status connected';
+                statusEl.innerHTML = '✅ Real-time notifications active';
+            } else {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.innerHTML = '❌ Using local notifications only';
+            }
+        }
+
+        // Send notification to Firebase
+        async function sendNotificationToFirebase(orderId, customerName, status) {
+            if (!isConnected) return false;
+            
+            try {
+                const notificationData = {
+                    orderId: orderId,
+                    customerName: customerName,
+                    status: status,
+                    timestamp: Date.now()
+                };
+
+                const response = await fetch(`${FIREBASE_URL}/notifications/${orderId}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(notificationData)
+                });
+
+                return response.ok;
+            } catch (error) {
+                console.log('Failed to send notification:', error);
+                return false;
+            }
+        }
+
+        // Check for notifications from Firebase
+        async function checkFirebaseNotifications() {
+            if (!currentCustomerId || !isConnected) return;
+            
+            try {
+                const response = await fetch(`${FIREBASE_URL}/notifications/${currentCustomerId}.json`);
+                const data = await response.json();
+                
+                if (data && data.status === 'buzzed') {
+                    const order = orders.find(o => o.id === currentCustomerId);
+                    if (order && order.status !== 'buzzed') {
+                        order.status = 'buzzed';
+                        showCustomerStatus(currentCustomerId);
+                        
+                        // Clean up the notification
+                        fetch(`${FIREBASE_URL}/notifications/${currentCustomerId}.json`, {
+                            method: 'DELETE'
+                        });
+                        
+                        console.log('🔔 REAL-TIME NOTIFICATION RECEIVED!');
+                    }
+                }
+            } catch (error) {
+                console.log('Could not check notifications:', error);
+            }
+        }
 
         // Switch between admin and customer tabs
         function switchTab(tab) {
@@ -338,7 +434,6 @@
             pendingCustomerName = customerName;
             const tempOrderId = Date.now();
             
-            // Create URL with notification endpoint
             const customerURL = `${window.location.origin}${window.location.pathname}?order=${tempOrderId}&customer=${encodeURIComponent(customerName)}`;
             const qrCodeURL = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(customerURL)}`;
             
@@ -394,8 +489,6 @@
             let html = '';
             orders.forEach((order, index) => {
                 const queueNumber = index + 1;
-                const buzzUrl = `${window.location.origin}${window.location.pathname}?order=${order.id}&customer=${encodeURIComponent(order.customerName)}&buzz=1`;
-                
                 html += `
                     <div class="queue-item ${order.status === 'buzzed' ? 'buzzed' : ''}">
                         <div class="queue-number">${queueNumber}</div>
@@ -410,20 +503,14 @@
                             }
                         </div>
                     </div>
-                    ${order.status === 'waiting' ? `
-                        <div class="buzz-url">
-                            <strong>Buzz URL:</strong><br>
-                            <a href="${buzzUrl}" target="_blank" style="color: #1976d2;">${buzzUrl}</a>
-                        </div>
-                    ` : ''}
                 `;
             });
 
             list.innerHTML = html;
         }
 
-        // Buzz customer - creates a special URL
-        function buzzCustomer(orderId) {
+        // Buzz customer with real-time notification
+        async function buzzCustomer(orderId) {
             const order = orders.find(o => o.id === orderId);
             if (order) {
                 order.status = 'buzzed';
@@ -431,14 +518,14 @@
                 displayActiveOrders();
                 saveToLocalStorage();
                 
-                const buzzUrl = `${window.location.origin}${window.location.pathname}?order=${orderId}&customer=${encodeURIComponent(order.customerName)}&buzz=1`;
+                // Send real-time notification
+                const success = await sendNotificationToFirebase(orderId, order.customerName, 'buzzed');
                 
-                // Copy URL to clipboard
-                navigator.clipboard.writeText(buzzUrl).then(() => {
-                    alert(`${order.customerName} has been buzzed! 🔔\n\nBuzz URL copied to clipboard!\nSend this link to customer:\n\n${buzzUrl}`);
-                }).catch(() => {
-                    alert(`${order.customerName} has been buzzed! 🔔\n\nSend this URL to customer:\n\n${buzzUrl}`);
-                });
+                if (success) {
+                    alert(`${order.customerName} has been buzzed! 🔔\n\nCustomer should get AUTOMATIC notification within 3 seconds.`);
+                } else {
+                    alert(`${order.customerName} has been buzzed! 🔔\n\nReal-time notifications are offline. Customer will need to refresh their page.`);
+                }
             }
         }
 
@@ -468,12 +555,11 @@
             }
         }
 
-        // Check for QR scan or buzz notification
+        // Check for QR scan
         function checkForQRScan() {
             const urlParams = new URLSearchParams(window.location.search);
             const orderId = urlParams.get('order');
             const customerName = urlParams.get('customer');
-            const isBuzz = urlParams.get('buzz');
             
             if (orderId && customerName) {
                 document.querySelector('.tab-buttons').style.display = 'none';
@@ -481,49 +567,25 @@
                 document.getElementById('customer').style.display = 'block';
                 document.getElementById('customer').classList.add('active');
                 
-                currentCustomerId = parseInt(orderId);
+                const order = {
+                    id: parseInt(orderId),
+                    customerName: decodeURIComponent(customerName),
+                    time: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleDateString(),
+                    status: 'waiting'
+                };
                 
-                if (isBuzz) {
-                    // This is a buzz notification!
-                    showBuzzNotification(customerName);
-                } else {
-                    // Regular QR scan
-                    const order = {
-                        id: parseInt(orderId),
-                        customerName: decodeURIComponent(customerName),
-                        time: new Date().toLocaleTimeString(),
-                        date: new Date().toLocaleDateString(),
-                        status: 'waiting'
-                    };
-                    
-                    if (!orders.find(o => o.id === order.id)) {
-                        orders.push(order);
-                        saveToLocalStorage();
-                    }
-                    
-                    showCustomerStatus(order.id);
+                if (!orders.find(o => o.id === order.id)) {
+                    orders.push(order);
+                    saveToLocalStorage();
                 }
+                
+                currentCustomerId = order.id;
+                showCustomerStatus(order.id);
                 
                 return true;
             }
             return false;
-        }
-
-        // Show buzz notification
-        function showBuzzNotification(customerName) {
-            const customerInfo = document.getElementById('customerInfo');
-            customerInfo.innerHTML = `
-                <div class="pickup-alert">
-                    🔔 Your order is ready for pickup!
-                </div>
-                <div class="ready-message">
-                    Hi ${decodeURIComponent(customerName)}!<br>
-                    Please come to the counter
-                </div>
-                <p>Thank you for waiting!</p>
-            `;
-            
-            playNotification();
         }
 
         // Show customer status
@@ -536,38 +598,53 @@
                 return;
             }
 
-            customerInfo.innerHTML = `
-                <div style="text-align: center; padding: 40px 20px;">
-                    <div style="font-size: 24px; color: #667eea; margin-bottom: 20px;">
-                        ⏳ Please wait...
+            const isQRCustomer = document.querySelector('.tab-buttons').style.display === 'none';
+
+            if (order.status === 'buzzed') {
+                customerInfo.innerHTML = `
+                    <div class="pickup-alert">
+                        🔔 Your order is ready for pickup!
                     </div>
-                    <div style="font-size: 18px; color: #333; margin-bottom: 15px;">
-                        Hi <strong>${order.customerName}</strong>!
+                    <div class="ready-message">
+                        Hi ${order.customerName}!<br>
+                        Please come to the counter
                     </div>
-                    <div style="font-size: 16px; color: #666; margin-bottom: 20px;">
-                        Your order was received at <strong>${order.time}</strong>
+                    <p>Order placed at: ${order.time}</p>
+                `;
+                
+                playNotification();
+            } else if (isQRCustomer) {
+                customerInfo.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 24px; color: #667eea; margin-bottom: 20px;">
+                            ⏳ Please wait...
+                        </div>
+                        <div style="font-size: 18px; color: #333; margin-bottom: 15px;">
+                            Hi <strong>${order.customerName}</strong>!
+                        </div>
+                        <div style="font-size: 16px; color: #666; margin-bottom: 20px;">
+                            Your order was received at <strong>${order.time}</strong>
+                        </div>
+                        <div style="font-size: 16px; color: #666; margin-bottom: 30px;">
+                            We're preparing your order.<br>
+                            You'll get notified automatically when it's ready.
+                        </div>
+                        <div style="font-size: 14px; color: #999;">
+                            Please keep this page open to receive notifications.
+                        </div>
                     </div>
-                    <div style="font-size: 16px; color: #666; margin-bottom: 30px;">
-                        We're preparing your order.<br>
-                        You'll get notified when it's ready.
-                    </div>
-                    <div style="font-size: 14px; color: #999;">
-                        Keep this page open for notifications.
-                    </div>
-                </div>
-            `;
+                `;
+            }
         }
 
         // Play notification
         function playNotification() {
             console.log('Playing notification');
             
-            // Vibration
             if ('vibrate' in navigator) {
                 navigator.vibrate([200, 100, 200, 100, 200, 100, 500]);
             }
             
-            // Screen flash
             document.body.style.background = '#ff4757';
             setTimeout(() => {
                 document.body.style.background = '#ff6b6b';
@@ -576,7 +653,6 @@
                 }, 300);
             }, 200);
 
-            // Beep sounds
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
@@ -680,9 +756,22 @@
             }
         }
 
+        // Check for notifications every 3 seconds
+        setInterval(() => {
+            if (currentCustomerId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const isCustomerView = urlParams.get('order') && urlParams.get('customer');
+                
+                if (isCustomerView) {
+                    checkFirebaseNotifications();
+                }
+            }
+        }, 3000);
+
         // Load data when app starts
         window.addEventListener('load', function() {
             loadFromLocalStorage();
+            initializeFirebase();
             
             if (!checkForQRScan()) {
                 console.log('Normal admin load');
