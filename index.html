@@ -236,22 +236,22 @@
             border-top: 2px solid #e9ecef;
         }
 
-        .test-notification {
-            background: #17a2b8;
-            color: white;
+        .buzz-url {
+            background: #e3f2fd;
             padding: 10px;
             border-radius: 5px;
             margin: 10px 0;
-            text-align: center;
-            font-size: 14px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v3.1</h1>
-            <p>Automatic cross-device notifications via public sheet</p>
+            <h1>🥖 Bhosky v4.0</h1>
+            <p>Simple URL-based notifications</p>
         </div>
 
         <div class="tab-buttons">
@@ -304,19 +304,13 @@
                     <button class="btn" onclick="simulateCustomerView()" id="simulateBtn" style="display: none;">
                         📱 Show Latest Customer View
                     </button>
-                    <div class="test-notification" onclick="testNotification()" style="cursor: pointer; margin-top: 10px;">
-                        🔔 Test Notification (Click Me)
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Simple notification system using URL fragment for cross-device communication
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzqMMoku-2yfR3FImjTMORuJNsH4FXCNJm9Wp1xEEmW1x7NWgWtSUxNpadxFZO39vT/exec';
-        
-        const SHEET_ID = '1OErfclJ6KYOBZdxJ0t9zyUHlXODdJM1oIU4dWia7SBU';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFz31v-wwrAgtJgz35BM4v0Kohk6gc5TKC_SFRPwqZ2p_Kvrpy73iEOE8TU42UCUPp/exec';
         
         let orders = [];
         let completedOrders = [];
@@ -400,6 +394,8 @@
             let html = '';
             orders.forEach((order, index) => {
                 const queueNumber = index + 1;
+                const buzzUrl = `${window.location.origin}${window.location.pathname}?order=${order.id}&customer=${encodeURIComponent(order.customerName)}&buzz=1`;
+                
                 html += `
                     <div class="queue-item ${order.status === 'buzzed' ? 'buzzed' : ''}">
                         <div class="queue-number">${queueNumber}</div>
@@ -414,64 +410,20 @@
                             }
                         </div>
                     </div>
+                    ${order.status === 'waiting' ? `
+                        <div class="buzz-url">
+                            <strong>Buzz URL:</strong><br>
+                            <a href="${buzzUrl}" target="_blank" style="color: #1976d2;">${buzzUrl}</a>
+                        </div>
+                    ` : ''}
                 `;
             });
 
             list.innerHTML = html;
         }
 
-        // Manual status check for customers
-        function checkStatus() {
-            if (currentCustomerId) {
-                // Reload order data and check status
-                loadFromLocalStorage();
-                
-                const order = orders.find(o => o.id === currentCustomerId);
-                if (order) {
-                    showCustomerStatus(currentCustomerId);
-                    if (order.status === 'buzzed') {
-                        alert('Your order is ready for pickup! 🔔');
-                    } else {
-                        alert('Your order is still being prepared. We\'ll notify you when ready!');
-                    }
-                } else {
-                    alert('Checking status... Please wait a moment and try again.');
-                }
-            }
-        }
-        function checkForNotifications() {
-            if (!currentCustomerId) return;
-            
-            // Check Google Sheets for cross-device updates
-            checkOrderStatusFromSheet();
-        }
-        async function sendBuzzStatusToSheet(orderId, customerName, status) {
-            try {
-                const buzzData = {
-                    action: 'buzz',
-                    orderId: orderId,
-                    customerName: customerName,
-                    status: status,
-                    time: new Date().toLocaleTimeString(),
-                    date: new Date().toLocaleDateString()
-                };
-
-                await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify(buzzData),
-                    mode: 'no-cors'
-                });
-
-                console.log('Buzz status sent to Google Sheet');
-                return true;
-            } catch (error) {
-                console.error('Error sending buzz status:', error);
-                return false;
-            }
-        }
-        // Buzz customer - write directly to main sheet with special format
-        async function buzzCustomer(orderId) {
+        // Buzz customer - creates a special URL
+        function buzzCustomer(orderId) {
             const order = orders.find(o => o.id === orderId);
             if (order) {
                 order.status = 'buzzed';
@@ -479,30 +431,14 @@
                 displayActiveOrders();
                 saveToLocalStorage();
                 
-                // Write buzz notification directly to main sheet with special marker
-                try {
-                    const buzzNotification = {
-                        customerName: `BUZZ_${order.customerName}`,
-                        orderTime: order.time,
-                        buzzedTime: order.buzzedTime,
-                        collectedTime: 'PENDING',
-                        date: order.date,
-                        orderId: orderId
-                    };
-
-                    await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify(buzzNotification),
-                        mode: 'no-cors'
-                    });
-
-                    console.log('Buzz notification sent to main sheet');
-                } catch (e) {
-                    console.log('Could not send buzz notification');
-                }
+                const buzzUrl = `${window.location.origin}${window.location.pathname}?order=${orderId}&customer=${encodeURIComponent(order.customerName)}&buzz=1`;
                 
-                alert(`${order.customerName} has been buzzed! ✅\n\nCustomer should get automatic notification within 10 seconds.`);
+                // Copy URL to clipboard
+                navigator.clipboard.writeText(buzzUrl).then(() => {
+                    alert(`${order.customerName} has been buzzed! 🔔\n\nBuzz URL copied to clipboard!\nSend this link to customer:\n\n${buzzUrl}`);
+                }).catch(() => {
+                    alert(`${order.customerName} has been buzzed! 🔔\n\nSend this URL to customer:\n\n${buzzUrl}`);
+                });
             }
         }
 
@@ -532,11 +468,12 @@
             }
         }
 
-        // Check for QR scan
+        // Check for QR scan or buzz notification
         function checkForQRScan() {
             const urlParams = new URLSearchParams(window.location.search);
             const orderId = urlParams.get('order');
             const customerName = urlParams.get('customer');
+            const isBuzz = urlParams.get('buzz');
             
             if (orderId && customerName) {
                 document.querySelector('.tab-buttons').style.display = 'none';
@@ -544,25 +481,49 @@
                 document.getElementById('customer').style.display = 'block';
                 document.getElementById('customer').classList.add('active');
                 
-                const order = {
-                    id: parseInt(orderId),
-                    customerName: decodeURIComponent(customerName),
-                    time: new Date().toLocaleTimeString(),
-                    date: new Date().toLocaleDateString(),
-                    status: 'waiting'
-                };
+                currentCustomerId = parseInt(orderId);
                 
-                if (!orders.find(o => o.id === order.id)) {
-                    orders.push(order);
-                    saveToLocalStorage();
+                if (isBuzz) {
+                    // This is a buzz notification!
+                    showBuzzNotification(customerName);
+                } else {
+                    // Regular QR scan
+                    const order = {
+                        id: parseInt(orderId),
+                        customerName: decodeURIComponent(customerName),
+                        time: new Date().toLocaleTimeString(),
+                        date: new Date().toLocaleDateString(),
+                        status: 'waiting'
+                    };
+                    
+                    if (!orders.find(o => o.id === order.id)) {
+                        orders.push(order);
+                        saveToLocalStorage();
+                    }
+                    
+                    showCustomerStatus(order.id);
                 }
-                
-                currentCustomerId = order.id;
-                showCustomerStatus(order.id);
                 
                 return true;
             }
             return false;
+        }
+
+        // Show buzz notification
+        function showBuzzNotification(customerName) {
+            const customerInfo = document.getElementById('customerInfo');
+            customerInfo.innerHTML = `
+                <div class="pickup-alert">
+                    🔔 Your order is ready for pickup!
+                </div>
+                <div class="ready-message">
+                    Hi ${decodeURIComponent(customerName)}!<br>
+                    Please come to the counter
+                </div>
+                <p>Thank you for waiting!</p>
+            `;
+            
+            playNotification();
         }
 
         // Show customer status
@@ -575,110 +536,26 @@
                 return;
             }
 
-            const isQRCustomer = document.querySelector('.tab-buttons').style.display === 'none';
-
-            if (order.status === 'buzzed') {
-                customerInfo.innerHTML = `
-                    <div class="pickup-alert">
-                        🔔 Your order is ready for pickup!
+            customerInfo.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 24px; color: #667eea; margin-bottom: 20px;">
+                        ⏳ Please wait...
                     </div>
-                    <div class="ready-message">
-                        Hi ${order.customerName}!<br>
-                        Please come to the counter
+                    <div style="font-size: 18px; color: #333; margin-bottom: 15px;">
+                        Hi <strong>${order.customerName}</strong>!
                     </div>
-                    <p>Order placed at: ${order.time}</p>
-                `;
-                
-                playNotification();
-            } else if (isQRCustomer) {
-                customerInfo.innerHTML = `
-                    <div style="text-align: center; padding: 40px 20px;">
-                        <div style="font-size: 24px; color: #667eea; margin-bottom: 20px;">
-                            ⏳ Please wait...
-                        </div>
-                        <div style="font-size: 18px; color: #333; margin-bottom: 15px;">
-                            Hi <strong>${order.customerName}</strong>!
-                        </div>
-                        <div style="font-size: 16px; color: #666; margin-bottom: 20px;">
-                            Your order was received at <strong>${order.time}</strong>
-                        </div>
-                        <div style="font-size: 16px; color: #666; margin-bottom: 30px;">
-                            We're preparing your order.<br>
-                            You'll get notified automatically when it's ready.
-                        </div>
-                        <div style="font-size: 14px; color: #999;">
-                            Please keep this page open to receive notifications.
-                        </div>
+                    <div style="font-size: 16px; color: #666; margin-bottom: 20px;">
+                        Your order was received at <strong>${order.time}</strong>
                     </div>
-                `;
-            }
-        }
-
-        // Check for buzz notifications by reading the public Google Sheet
-        async function checkForAutomaticNotifications() {
-            if (!currentCustomerId) return;
-            
-            // Don't check too frequently
-            const now = Date.now();
-            if (now - lastCheckTime < 5000) return; // Only check every 5 seconds
-            lastCheckTime = now;
-            
-            try {
-                // Read the main Google Sheet as CSV
-                const sheetURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-                
-                const response = await fetch(sheetURL, { mode: 'cors' });
-                const csvText = await response.text();
-                
-                // Look for our buzz notification
-                const lines = csvText.split('\n');
-                
-                for (let line of lines) {
-                    if (line.includes(`BUZZ_`) && line.includes(currentCustomerId.toString())) {
-                        // Found our buzz notification!
-                        const order = orders.find(o => o.id === currentCustomerId);
-                        if (order && order.status !== 'buzzed') {
-                            order.status = 'buzzed';
-                            showCustomerStatus(currentCustomerId);
-                            console.log('🔔 AUTOMATIC NOTIFICATION DETECTED!');
-                            return;
-                        }
-                    }
-                }
-                
-                console.log('No buzz notification found, still waiting...');
-                
-            } catch (error) {
-                console.log('Could not check for notifications:', error);
-            }
-        }
-
-        // Check local notifications (renamed for clarity)
-        function checkForLocalNotifications() {
-            if (!currentCustomerId) return;
-            
-            try {
-                const notificationData = JSON.parse(localStorage.getItem('buzzer_notification') || sessionStorage.getItem('buzzer_notification') || '{}');
-                
-                if (notificationData.orderId === currentCustomerId && notificationData.status === 'buzzed') {
-                    const order = orders.find(o => o.id === currentCustomerId);
-                    if (order && order.status !== 'buzzed') {
-                        order.status = 'buzzed';
-                        showCustomerStatus(currentCustomerId);
-                        
-                        // Clear the notification
-                        localStorage.removeItem('buzzer_notification');
-                        sessionStorage.removeItem('buzzer_notification');
-                    }
-                }
-            } catch (e) {
-                console.log('Could not check local notifications');
-            }
-        }
-
-        // Test notification function
-        function testNotification() {
-            playNotification();
+                    <div style="font-size: 16px; color: #666; margin-bottom: 30px;">
+                        We're preparing your order.<br>
+                        You'll get notified when it's ready.
+                    </div>
+                    <div style="font-size: 14px; color: #999;">
+                        Keep this page open for notifications.
+                    </div>
+                </div>
+            `;
         }
 
         // Play notification
@@ -802,18 +679,6 @@
                 showCustomerStatus(lastOrder.id);
             }
         }
-
-        // Automatic notification checking every 5 seconds
-        setInterval(() => {
-            if (currentCustomerId) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const isCustomerView = urlParams.get('order') && urlParams.get('customer');
-                
-                if (isCustomerView) {
-                    checkForAutomaticNotifications();
-                }
-            }
-        }, 5000);
 
         // Load data when app starts
         window.addEventListener('load', function() {
