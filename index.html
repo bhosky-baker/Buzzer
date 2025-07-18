@@ -258,8 +258,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v5.0</h1>
-            <p>Real-time cross-device notifications</p>
+            <h1>🥖 Bhosky v5.1</h1>
+            <p>Enhanced debugging for notifications</p>
         </div>
 
         <div class="tab-buttons">
@@ -335,37 +335,53 @@
 
         // Initialize Firebase connection
         function initializeFirebase() {
+            console.log('Initializing Firebase connection...');
+            
             // Test Firebase connection
             fetch(`${FIREBASE_URL}/.json`)
                 .then(response => response.json())
                 .then(() => {
                     isConnected = true;
                     updateConnectionStatus();
-                    console.log('Connected to notification service');
+                    console.log('✅ Connected to notification service - Real-time notifications will work!');
                 })
-                .catch(() => {
+                .catch((error) => {
                     isConnected = false;
                     updateConnectionStatus();
-                    console.log('Failed to connect to notification service');
+                    console.log('❌ Failed to connect to notification service:', error);
                 });
         }
 
         function updateConnectionStatus() {
             const statusEl = document.getElementById('connectionStatus');
+            if (!statusEl) {
+                console.log('Connection status element not found!');
+                return;
+            }
+            
             if (isConnected) {
                 statusEl.className = 'connection-status connected';
-                statusEl.innerHTML = '✅ Real-time notifications active';
+                statusEl.innerHTML = '✅ Real-time notifications active - Customer phones will buzz automatically!';
+                statusEl.style.display = 'block';
+                console.log('Status updated: Connected');
             } else {
                 statusEl.className = 'connection-status disconnected';
-                statusEl.innerHTML = '❌ Using local notifications only';
+                statusEl.innerHTML = '❌ Real-time notifications offline - Customers need to refresh page';
+                statusEl.style.display = 'block';
+                console.log('Status updated: Disconnected');
             }
         }
 
         // Send notification to Firebase
         async function sendNotificationToFirebase(orderId, customerName, status) {
-            if (!isConnected) return false;
+            if (!isConnected) {
+                console.log('❌ Cannot send notification - not connected to Firebase');
+                return false;
+            }
             
             try {
+                console.log(`🔔 Sending notification to Firebase for order ${orderId}:`, {orderId, customerName, status});
+                
                 const notificationData = {
                     orderId: orderId,
                     customerName: customerName,
@@ -379,9 +395,15 @@
                     body: JSON.stringify(notificationData)
                 });
 
-                return response.ok;
+                if (response.ok) {
+                    console.log('✅ Notification sent successfully to Firebase');
+                    return true;
+                } else {
+                    console.log('❌ Failed to send notification - response not ok');
+                    return false;
+                }
             } catch (error) {
-                console.log('Failed to send notification:', error);
+                console.log('❌ Failed to send notification:', error);
                 return false;
             }
         }
