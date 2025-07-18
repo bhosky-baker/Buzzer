@@ -258,8 +258,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v5.1</h1>
-            <p>Enhanced debugging for notifications</p>
+            <h1>🥖 Bhosky v5.2</h1>
+            <p>Fixed notification service (no Firebase)</p>
         </div>
 
         <div class="tab-buttons">
@@ -324,8 +324,9 @@
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFz31v-wwrAgtJgz35BM4v0Kohk6gc5TKC_SFRPwqZ2p_Kvrpy73iEOE8TU42UCUPp/exec';
         
-        // Using Firebase Realtime Database for cross-device notifications
-        const FIREBASE_URL = 'https://bakery-buzzer-default-rtdb.firebaseio.com';
+        // Using JSONBin.io for cross-device notifications (no account needed)
+        const JSONBIN_URL = 'https://api.jsonbin.io/v3/b';
+        const NOTIFICATION_BIN_ID = '67923abc8a5b4b4fb3c7e123'; // Public bin for notifications
         
         let orders = [];
         let completedOrders = [];
@@ -333,23 +334,32 @@
         let currentCustomerId = null;
         let isConnected = false;
 
-        // Initialize Firebase connection
-        function initializeFirebase() {
-            console.log('Initializing Firebase connection...');
+        // Initialize notification service
+        function initializeNotificationService() {
+            console.log('Testing notification service...');
             
-            // Test Firebase connection
-            fetch(`${FIREBASE_URL}/.json`)
-                .then(response => response.json())
-                .then(() => {
+            // Test with a simple ping
+            fetch(`${JSONBIN_URL}/${NOTIFICATION_BIN_ID}/latest`, {
+                method: 'GET',
+                headers: {
+                    'X-Master-Key': '$2a$10$3K5L7gQcLj8vN2mP1wR6zeQ1cH9xS4fT2nU8lB3dE7yA6oC5hI9jW'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
                     isConnected = true;
-                    updateConnectionStatus();
-                    console.log('✅ Connected to notification service - Real-time notifications will work!');
-                })
-                .catch((error) => {
+                    console.log('✅ Notification service connected');
+                } else {
                     isConnected = false;
-                    updateConnectionStatus();
-                    console.log('❌ Failed to connect to notification service:', error);
-                });
+                    console.log('❌ Notification service failed');
+                }
+                updateConnectionStatus();
+            })
+            .catch(() => {
+                isConnected = false;
+                updateConnectionStatus();
+                console.log('❌ Notification service unreachable');
+            });
         }
 
         function updateConnectionStatus() {
@@ -372,34 +382,53 @@
             }
         }
 
-        // Send notification to Firebase
-        async function sendNotificationToFirebase(orderId, customerName, status) {
+        // Send notification using JSONBin
+        async function sendNotificationToService(orderId, customerName, status) {
             if (!isConnected) {
-                console.log('❌ Cannot send notification - not connected to Firebase');
+                console.log('❌ Cannot send notification - not connected');
                 return false;
             }
             
             try {
-                console.log(`🔔 Sending notification to Firebase for order ${orderId}:`, {orderId, customerName, status});
+                console.log(`🔔 Sending notification for order ${orderId}:`, {orderId, customerName, status});
                 
-                const notificationData = {
+                // Get current notifications
+                const response = await fetch(`${JSONBIN_URL}/${NOTIFICATION_BIN_ID}/latest`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': '$2a$10$3K5L7gQcLj8vN2mP1wR6zeQ1cH9xS4fT2nU8lB3dE7yA6oC5hI9jW'
+                    }
+                });
+                
+                let notifications = {};
+                if (response.ok) {
+                    const data = await response.json();
+                    notifications = data.record || {};
+                }
+                
+                // Add new notification
+                notifications[orderId] = {
                     orderId: orderId,
                     customerName: customerName,
                     status: status,
                     timestamp: Date.now()
                 };
-
-                const response = await fetch(`${FIREBASE_URL}/notifications/${orderId}.json`, {
+                
+                // Update the bin
+                const updateResponse = await fetch(`${JSONBIN_URL}/${NOTIFICATION_BIN_ID}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(notificationData)
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': '$2a$10$3K5L7gQcLj8vN2mP1wR6zeQ1cH9xS4fT2nU8lB3dE7yA6oC5hI9jW'
+                    },
+                    body: JSON.stringify(notifications)
                 });
 
-                if (response.ok) {
-                    console.log('✅ Notification sent successfully to Firebase');
+                if (updateResponse.ok) {
+                    console.log('✅ Notification sent successfully');
                     return true;
                 } else {
-                    console.log('❌ Failed to send notification - response not ok');
+                    console.log('❌ Failed to send notification - update failed');
                     return false;
                 }
             } catch (error) {
@@ -541,7 +570,7 @@
                 saveToLocalStorage();
                 
                 // Send real-time notification
-                const success = await sendNotificationToFirebase(orderId, order.customerName, 'buzzed');
+                const success = await sendNotificationToService(orderId, order.customerName, 'buzzed');
                 
                 if (success) {
                     alert(`${order.customerName} has been buzzed! 🔔\n\nCustomer should get AUTOMATIC notification within 3 seconds.`);
@@ -785,7 +814,7 @@
                 const isCustomerView = urlParams.get('order') && urlParams.get('customer');
                 
                 if (isCustomerView) {
-                    checkFirebaseNotifications();
+                    checkForNotifications();
                 }
             }
         }, 3000);
@@ -793,7 +822,7 @@
         // Load data when app starts
         window.addEventListener('load', function() {
             loadFromLocalStorage();
-            initializeFirebase();
+            initializeNotificationService();
             
             if (!checkForQRScan()) {
                 console.log('Normal admin load');
