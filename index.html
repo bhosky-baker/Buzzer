@@ -250,8 +250,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v2.9</h1>
-            <p>Debug buzz notifications + local backup</p>
+            <h1>🥖 Bhosky v3.0</h1>
+            <p>Reliable manual status checking</p>
         </div>
 
         <div class="tab-buttons">
@@ -420,7 +420,25 @@
             list.innerHTML = html;
         }
 
-        // Check for notifications (now includes Google Sheets check)
+        // Manual status check for customers
+        function checkStatus() {
+            if (currentCustomerId) {
+                // Reload order data and check status
+                loadFromLocalStorage();
+                
+                const order = orders.find(o => o.id === currentCustomerId);
+                if (order) {
+                    showCustomerStatus(currentCustomerId);
+                    if (order.status === 'buzzed') {
+                        alert('Your order is ready for pickup! 🔔');
+                    } else {
+                        alert('Your order is still being prepared. We\'ll notify you when ready!');
+                    }
+                } else {
+                    alert('Checking status... Please wait a moment and try again.');
+                }
+            }
+        }
         function checkForNotifications() {
             if (!currentCustomerId) return;
             
@@ -452,7 +470,7 @@
                 return false;
             }
         }
-        // Buzz customer - now with Google Sheets communication
+        // Buzz customer - simplified approach focusing on reliability
         async function buzzCustomer(orderId) {
             const order = orders.find(o => o.id === orderId);
             if (order) {
@@ -461,10 +479,14 @@
                 displayActiveOrders();
                 saveToLocalStorage();
                 
-                // Send buzz status to Google Sheets for cross-device communication
-                await sendBuzzStatusToSheet(orderId, order.customerName, 'buzzed');
+                // Try to send to Google Sheets (may not work due to CORS)
+                try {
+                    await sendBuzzStatusToSheet(orderId, order.customerName, 'buzzed');
+                } catch (e) {
+                    console.log('Google Sheets notification failed (expected)');
+                }
                 
-                alert(`${order.customerName} has been buzzed!\n\nCustomer phone should get notification within 5 seconds.`);
+                alert(`${order.customerName} has been buzzed! ✅\n\nCustomer should:\n1. Click "Check Status" button on their phone\n2. Or refresh their page\n\nThey will then get the pickup notification.`);
             }
         }
 
@@ -568,9 +590,12 @@
                             We're preparing your order.<br>
                             We'll notify you when it's ready for pickup.
                         </div>
-                        <div style="font-size: 14px; color: #999;">
-                            Please keep this page open or refresh to check status.
+                        <div style="font-size: 14px; color: #999; margin-bottom: 20px;">
+                            Please keep this page open to receive notifications.
                         </div>
+                        <button onclick="checkStatus()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                            🔄 Check Status
+                        </button>
                     </div>
                 `;
             }
