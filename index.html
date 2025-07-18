@@ -250,8 +250,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🥖 Bhosky v3.0</h1>
-            <p>Reliable manual status checking</p>
+            <h1>🥖 Bhosky v3.1</h1>
+            <p>Automatic cross-device notifications via public sheet</p>
         </div>
 
         <div class="tab-buttons">
@@ -470,7 +470,7 @@
                 return false;
             }
         }
-        // Buzz customer - simplified approach focusing on reliability
+        // Buzz customer - write directly to main sheet with special format
         async function buzzCustomer(orderId) {
             const order = orders.find(o => o.id === orderId);
             if (order) {
@@ -479,14 +479,30 @@
                 displayActiveOrders();
                 saveToLocalStorage();
                 
-                // Try to send to Google Sheets (may not work due to CORS)
+                // Write buzz notification directly to main sheet with special marker
                 try {
-                    await sendBuzzStatusToSheet(orderId, order.customerName, 'buzzed');
+                    const buzzNotification = {
+                        customerName: `BUZZ_${order.customerName}`,
+                        orderTime: order.time,
+                        buzzedTime: order.buzzedTime,
+                        collectedTime: 'PENDING',
+                        date: order.date,
+                        orderId: orderId
+                    };
+
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(buzzNotification),
+                        mode: 'no-cors'
+                    });
+
+                    console.log('Buzz notification sent to main sheet');
                 } catch (e) {
-                    console.log('Google Sheets notification failed (expected)');
+                    console.log('Could not send buzz notification');
                 }
                 
-                alert(`${order.customerName} has been buzzed! ✅\n\nCustomer should:\n1. Click "Check Status" button on their phone\n2. Or refresh their page\n\nThey will then get the pickup notification.`);
+                alert(`${order.customerName} has been buzzed! ✅\n\nCustomer should get automatic notification within 10 seconds.`);
             }
         }
 
@@ -588,58 +604,52 @@
                         </div>
                         <div style="font-size: 16px; color: #666; margin-bottom: 30px;">
                             We're preparing your order.<br>
-                            We'll notify you when it's ready for pickup.
+                            You'll get notified automatically when it's ready.
                         </div>
-                        <div style="font-size: 14px; color: #999; margin-bottom: 20px;">
+                        <div style="font-size: 14px; color: #999;">
                             Please keep this page open to receive notifications.
                         </div>
-                        <button onclick="checkStatus()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-                            🔄 Check Status
-                        </button>
                     </div>
                 `;
             }
         }
 
-        // Check for order status from Google Sheets (for cross-device communication)
-        async function checkOrderStatusFromSheet() {
+        // Check for buzz notifications by reading the public Google Sheet
+        async function checkForAutomaticNotifications() {
             if (!currentCustomerId) return;
             
+            // Don't check too frequently
+            const now = Date.now();
+            if (now - lastCheckTime < 5000) return; // Only check every 5 seconds
+            lastCheckTime = now;
+            
             try {
-                // Check the 'Buzzer' sheet for buzz notifications
-                const buzzerSheetURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Buzzer`;
+                // Read the main Google Sheet as CSV
+                const sheetURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
                 
-                const response = await fetch(buzzerSheetURL);
+                const response = await fetch(sheetURL, { mode: 'cors' });
                 const csvText = await response.text();
                 
-                // Parse CSV to find our order
+                // Look for our buzz notification
                 const lines = csvText.split('\n');
                 
-                // Look for our order ID in the Buzzer sheet
-                for (let i = 1; i < lines.length; i++) { // Skip header row
-                    const line = lines[i];
-                    if (line && line.includes(currentCustomerId.toString())) {
-                        // Found our order in the buzzer sheet - check status
-                        const columns = line.split(',');
-                        if (columns.length > 2 && columns[2] && columns[2].toLowerCase().includes('buzz')) {
-                            // Order has been buzzed!
-                            const order = orders.find(o => o.id === currentCustomerId);
-                            if (order && order.status !== 'buzzed') {
-                                order.status = 'buzzed';
-                                showCustomerStatus(currentCustomerId);
-                                console.log('Customer detected buzz from Google Sheet!');
-                                return;
-                            }
+                for (let line of lines) {
+                    if (line.includes(`BUZZ_`) && line.includes(currentCustomerId.toString())) {
+                        // Found our buzz notification!
+                        const order = orders.find(o => o.id === currentCustomerId);
+                        if (order && order.status !== 'buzzed') {
+                            order.status = 'buzzed';
+                            showCustomerStatus(currentCustomerId);
+                            console.log('🔔 AUTOMATIC NOTIFICATION DETECTED!');
+                            return;
                         }
                     }
                 }
                 
-                console.log('No buzz notification found for order:', currentCustomerId);
+                console.log('No buzz notification found, still waiting...');
                 
             } catch (error) {
-                console.log('Could not check Buzzer sheet:', error);
-                // Fallback to local storage check
-                checkForLocalNotifications();
+                console.log('Could not check for notifications:', error);
             }
         }
 
@@ -793,8 +803,17 @@
             }
         }
 
-        // Check for notifications every 3 seconds
-        setInterval(checkForNotifications, 3000);
+        // Automatic notification checking every 5 seconds
+        setInterval(() => {
+            if (currentCustomerId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const isCustomerView = urlParams.get('order') && urlParams.get('customer');
+                
+                if (isCustomerView) {
+                    checkForAutomaticNotifications();
+                }
+            }
+        }, 5000);
 
         // Load data when app starts
         window.addEventListener('load', function() {
